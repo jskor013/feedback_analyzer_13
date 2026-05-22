@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <iostream>
 #include "Feedback.h"
 #include "Constants.h"
 
@@ -62,10 +61,6 @@ public:
             }
         } else {
             finalFiltered = tmpFiltered;
-        }
-
-        for (const auto& i : finalFiltered) {
-            std::cout << i.getText() << std::endl;
         }
 
         return finalFiltered;

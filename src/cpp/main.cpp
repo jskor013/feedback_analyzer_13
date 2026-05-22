@@ -8,7 +8,6 @@
 #include "UIComponents.h"
 #include "Logger.h"
 #include <sstream>
-#include <fstream>
 #include <algorithm>
 #include <ctime>
 #include <iomanip>
@@ -277,10 +276,6 @@ int main() {
             }
 
             feedbacks.push_back(Feedback(text));
-
-            for (const auto& fb : feedbacks) {
-                Logger::logInfo(fb.getText());
-            }
 
             Logger::logInfo(u8"현재 " + std::to_string(feedbacks.size()) + u8"개의 피드백이 입력되었습니다.");
 

@@ -1,3 +1,3 @@
 #include "Logger.h"
 
-bool Logger::debugMode = true;
+bool Logger::debugMode = false;
