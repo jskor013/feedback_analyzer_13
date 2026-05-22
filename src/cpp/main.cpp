@@ -240,6 +240,15 @@ static void setHtmlResponse(httplib::Response& res, const std::string& html) {
     res.set_content(html, "text/html; charset=UTF-8");
 }
 
+struct AnalysisResult {
+    std::map<std::string, int> sentiment;
+    std::map<std::string, int> keywords;
+};
+
+static AnalysisResult analyzeFeedbacks(const std::vector<Feedback>& feedbacks) {
+    return {textAnalyzer.sent(feedbacks), textAnalyzer.kw(feedbacks)};
+}
+
 int main() {
     Constants::init();
     Filters::initFilterKeywords();
@@ -277,16 +286,15 @@ int main() {
             Logger::logInfo(u8"현재 " + std::to_string(feedbacks.size()) + u8"개의 피드백이 입력되었습니다.");
 
             std::string success = std::to_string(feedbacks.size()) + u8"개의 피드백이 입력되었습니다.";
-            std::map<std::string, int> sentimentResults, keywordResults;
+            AnalysisResult analysis;
 
             if (!feedbacks.empty()) {
-                sentimentResults = textAnalyzer.sent(feedbacks);
-                keywordResults = textAnalyzer.kw(feedbacks);
+                analysis = analyzeFeedbacks(feedbacks);
                 Logger::logInfo(u8"감성 분석 완료");
                 Logger::logInfo(u8"키워드 분석 완료");
             }
 
-            std::string html = renderPage(success, "", "", sentimentResults, keywordResults, feedbacks);
+            std::string html = renderPage(success, "", "", analysis.sentiment, analysis.keywords, feedbacks);
             setHtmlResponse(res, html);
         } catch (const std::exception& e) {
             Logger::logError(std::string(u8"오류 발생: ") + e.what());
@@ -356,10 +364,9 @@ int main() {
                 auto filtered = filters.fil(feedbacks, sentiment, keyword);
                 if (!filtered.empty()) {
                     fil_data[sessionId] = filtered;
-                    auto sentimentResults = textAnalyzer.sent(filtered);
-                    auto keywordResults = textAnalyzer.kw(filtered);
+                    auto analysis = analyzeFeedbacks(filtered);
                     Logger::logInfo(u8"필터링 결과: " + std::to_string(filtered.size()) + u8"개의 피드백");
-                    std::string html = renderPage("", "", "", sentimentResults, keywordResults, filtered);
+                    std::string html = renderPage("", "", "", analysis.sentiment, analysis.keywords, filtered);
                     setHtmlResponse(res, html);
                 } else {
                     fil_data.erase(sessionId);
