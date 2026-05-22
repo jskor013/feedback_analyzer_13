@@ -8,15 +8,30 @@
 #include "UIComponents.h"
 #include "Logger.h"
 #include <sstream>
-#include <fstream>
 #include <algorithm>
 #include <ctime>
 #include <iomanip>
 
-static std::vector<Feedback> fil_data;
+static std::map<std::string, std::vector<Feedback>> fil_data;
 static TextAnalyzer textAnalyzer;
 static Filters filters;
-static FileHandler fileHandler;
+
+static std::string getSessionId(const httplib::Request& req) {
+    const auto it = req.headers.find("Cookie");
+    if (it == req.headers.end()) {
+        return "default";
+    }
+
+    const std::string key = "sid=";
+    const auto pos = it->second.find(key);
+    if (pos == std::string::npos) {
+        return "default";
+    }
+
+    const auto start = pos + key.size();
+    const auto end = it->second.find(';', start);
+    return it->second.substr(start, end == std::string::npos ? std::string::npos : end - start);
+}
 
 // URL decode utility
 static std::string urlDecode(const std::string& str) {
@@ -60,6 +75,15 @@ static std::string getCurrentTimestamp() {
     std::ostringstream oss;
     oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
     return oss.str();
+}
+
+static std::string trimAsciiWhitespace(const std::string& text) {
+    const auto start = text.find_first_not_of(" \t\r\n");
+    if (start == std::string::npos) {
+        return "";
+    }
+    const auto end = text.find_last_not_of(" \t\r\n");
+    return text.substr(start, end - start + 1);
 }
 
 // Escape HTML
@@ -210,24 +234,17 @@ static std::string renderPage(const std::string& success,
     return html.str();
 }
 
-// Simple CSV line parser
-static std::vector<std::string> parseCsvLine(const std::string& line) {
-    std::vector<std::string> fields;
-    std::string field;
-    bool inQuotes = false;
-    for (size_t i = 0; i < line.size(); i++) {
-        char c = line[i];
-        if (c == '"') {
-            inQuotes = !inQuotes;
-        } else if (c == ',' && !inQuotes) {
-            fields.push_back(field);
-            field.clear();
-        } else {
-            field += c;
-        }
-    }
-    fields.push_back(field);
-    return fields;
+static void setHtmlResponse(httplib::Response& res, const std::string& html) {
+    res.set_content(html, "text/html; charset=UTF-8");
+}
+
+struct AnalysisResult {
+    std::map<std::string, int> sentiment;
+    std::map<std::string, int> keywords;
+};
+
+static AnalysisResult analyzeFeedbacks(const std::vector<Feedback>& feedbacks) {
+    return {textAnalyzer.sent(feedbacks), textAnalyzer.kw(feedbacks)};
 }
 
 int main() {
@@ -241,87 +258,98 @@ int main() {
         Session::initSessionStateUgly();
         auto& feedbacks = Session::getOldDataFromSession("current_feedbacks");
         std::string html = renderPage(u8"피드백 분석기 시작", "", "", {}, {}, feedbacks);
-        res.set_content(html, "text/html; charset=UTF-8");
+        setHtmlResponse(res, html);
     });
 
     // POST /analyze
     svr.Post("/analyze", [](const httplib::Request& req, httplib::Response& res) {
         try {
-            auto& feedbacks = Session::getCurrentFeedbacks();
+            auto& feedbacks = Session::getCurrentFeedbacks(getSessionId(req));
             auto params = parseForm(req.body);
             std::string text = params["text"];
+            text = trimAsciiWhitespace(text);
 
-            if (!text.empty()) {
-                // trim
-                auto start = text.find_first_not_of(" \t\r\n");
-                auto end = text.find_last_not_of(" \t\r\n");
-                if (start != std::string::npos) {
-                    text = text.substr(start, end - start + 1);
-                    feedbacks.push_back(Feedback(text));
-                }
+            if (text.empty()) {
+                std::string html = renderPage("", u8"유효한 입력을 입력해주세요.", "", {}, {}, feedbacks);
+                setHtmlResponse(res, html);
+                return;
             }
 
-            for (const auto& fb : feedbacks) {
-                Logger::logInfo(fb.getText());
-            }
+            feedbacks.push_back(Feedback(text));
 
             Logger::logInfo(u8"현재 " + std::to_string(feedbacks.size()) + u8"개의 피드백이 입력되었습니다.");
 
             std::string success = std::to_string(feedbacks.size()) + u8"개의 피드백이 입력되었습니다.";
-            std::map<std::string, int> sentimentResults, keywordResults;
+            AnalysisResult analysis;
 
             if (!feedbacks.empty()) {
-                sentimentResults = textAnalyzer.sent(feedbacks);
-                keywordResults = textAnalyzer.kw(feedbacks);
+                analysis = analyzeFeedbacks(feedbacks);
                 Logger::logInfo(u8"감성 분석 완료");
                 Logger::logInfo(u8"키워드 분석 완료");
             }
 
-            std::string html = renderPage(success, "", "", sentimentResults, keywordResults, feedbacks);
-            res.set_content(html, "text/html; charset=UTF-8");
+            std::string html = renderPage(success, "", "", analysis.sentiment, analysis.keywords, feedbacks);
+            setHtmlResponse(res, html);
         } catch (const std::exception& e) {
             Logger::logError(std::string(u8"오류 발생: ") + e.what());
             std::string html = renderPage("", "", u8"처리 중 오류가 발생했습니다.", {}, {}, {});
-            res.set_content(html, "text/html; charset=UTF-8");
+            setHtmlResponse(res, html);
         }
     });
 
     // POST /upload
     svr.Post("/upload", [](const httplib::Request& req, httplib::Response& res) {
         try {
-            auto& feedbacks = Session::getCurrentFeedbacks();
+            auto& feedbacks = Session::getCurrentFeedbacks(getSessionId(req));
+            if (!req.form.has_file("file")) {
+                std::string html = renderPage("", u8"파일이 선택되지 않았습니다.", "", {}, {}, feedbacks);
+                setHtmlResponse(res, html);
+                return;
+            }
+
+            const auto previousCount = feedbacks.size();
             if (req.form.has_file("file")) {
                 const auto file = req.form.get_file("file");
                 if (!file.content.empty()) {
-                    std::istringstream stream(file.content);
-                    std::string line;
                     bool firstLine = true;
-                    while (std::getline(stream, line)) {
-                        if (!line.empty() && line.back() == '\r') line.pop_back();
-                        if (firstLine) { firstLine = false; continue; }
-                        if (line.empty()) continue;
-                        auto fields = parseCsvLine(line);
-                        if (!fields.empty() && !fields[0].empty()) {
-                            feedbacks.push_back(Feedback(fields[0]));
+                    size_t textColumn = 0;
+                    for (const auto& fields : FileHandler::parseCsvRecords(file.content)) {
+                        if (fields.empty() || (fields.size() == 1 && fields[0].empty())) continue;
+                        if (firstLine) {
+                            firstLine = false;
+                            auto header = std::find(fields.begin(), fields.end(), "text");
+                            if (header != fields.end()) {
+                                textColumn = static_cast<size_t>(std::distance(fields.begin(), header));
+                                continue;
+                            }
+                        }
+                        if (fields.size() > textColumn && !fields[textColumn].empty()) {
+                            feedbacks.push_back(Feedback(fields[textColumn]));
                         }
                     }
                     Logger::logInfo(u8"파일이 성공적으로 업로드되었습니다.");
                 }
             }
+            if (feedbacks.size() == previousCount) {
+                std::string html = renderPage("", u8"유효한 CSV 피드백이 없습니다.", "", {}, {}, feedbacks);
+                setHtmlResponse(res, html);
+                return;
+            }
             std::string success = std::to_string(feedbacks.size()) + u8"개의 피드백이 입력되었습니다.";
             std::string html = renderPage(success, "", "", {}, {}, feedbacks);
-            res.set_content(html, "text/html; charset=UTF-8");
+            setHtmlResponse(res, html);
         } catch (const std::exception& e) {
             Logger::logError(std::string(u8"파일 업로드 오류: ") + e.what());
             std::string html = renderPage("", "", u8"파일 업로드 중 오류가 발생했습니다.", {}, {}, {});
-            res.set_content(html, "text/html; charset=UTF-8");
+            setHtmlResponse(res, html);
         }
     });
 
     // POST /filter
     svr.Post("/filter", [](const httplib::Request& req, httplib::Response& res) {
         try {
-            auto& feedbacks = Session::getCurrentFeedbacks();
+            const auto sessionId = getSessionId(req);
+            auto& feedbacks = Session::getCurrentFeedbacks(sessionId);
             auto params = parseForm(req.body);
             std::string sentiment = params["sentiment"];
             std::string keyword = params["keyword"];
@@ -329,44 +357,54 @@ int main() {
             if (!feedbacks.empty()) {
                 auto filtered = filters.fil(feedbacks, sentiment, keyword);
                 if (!filtered.empty()) {
-                    fil_data = filtered;
-                    auto sentimentResults = textAnalyzer.sent(filtered);
-                    auto keywordResults = textAnalyzer.kw(filtered);
+                    fil_data[sessionId] = filtered;
+                    auto analysis = analyzeFeedbacks(filtered);
                     Logger::logInfo(u8"필터링 결과: " + std::to_string(filtered.size()) + u8"개의 피드백");
-                    std::string html = renderPage("", "", "", sentimentResults, keywordResults, filtered);
-                    res.set_content(html, "text/html; charset=UTF-8");
+                    std::string html = renderPage("", "", "", analysis.sentiment, analysis.keywords, filtered);
+                    setHtmlResponse(res, html);
                 } else {
+                    fil_data.erase(sessionId);
                     Logger::logWarning(u8"필터링 결과가 없습니다.");
                     std::string html = renderPage("", u8"필터링 결과가 없습니다.", "", {}, {}, {});
-                    res.set_content(html, "text/html; charset=UTF-8");
+                    setHtmlResponse(res, html);
                 }
             } else {
                 Logger::logWarning(u8"분석할 피드백이 없습니다.");
                 std::string html = renderPage("", u8"분석할 피드백이 없습니다.", "", {}, {}, {});
-                res.set_content(html, "text/html; charset=UTF-8");
+                setHtmlResponse(res, html);
             }
         } catch (const std::exception& e) {
             Logger::logError(std::string(u8"오류 발생: ") + e.what());
             std::string html = renderPage("", "", u8"처리 중 오류가 발생했습니다.", {}, {}, {});
-            res.set_content(html, "text/html; charset=UTF-8");
+            setHtmlResponse(res, html);
         }
     });
 
     // GET /download
-    svr.Get("/download", [](const httplib::Request&, httplib::Response& res) {
+    svr.Get("/download", [](const httplib::Request& req, httplib::Response& res) {
+        const auto sessionId = getSessionId(req);
+        const auto filtered = fil_data.find(sessionId);
+        if (filtered == fil_data.end() || filtered->second.empty()) {
+            res.set_content("", "text/csv; charset=UTF-8");
+            return;
+        }
+
         std::ostringstream csv;
         // UTF-8 BOM
         csv << "\xEF\xBB\xBF";
         csv << "text\n";
-        for (const auto& iter : fil_data) {
-            csv << iter.getText() << "\n";
+        for (const auto& iter : filtered->second) {
+            csv << FileHandler::escapeCsvField(iter.getText()) << "\n";
         }
         res.set_header("Content-Disposition", "attachment; filename=\"filtered_feedback.csv\"");
         res.set_content(csv.str(), "text/csv; charset=UTF-8");
     });
 
     Logger::logInfo(u8"서버가 http://localhost:8080 에서 시작됩니다.");
-    svr.listen("0.0.0.0", 8080);
+    if (!svr.listen("0.0.0.0", 8080)) {
+        Logger::logError(u8"서버 시작 실패: 포트 8080 바인딩을 확인하세요.");
+        return 1;
+    }
 
     return 0;
 }

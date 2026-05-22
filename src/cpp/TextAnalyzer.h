@@ -7,9 +7,6 @@
 
 class TextAnalyzer {
 private:
-    static std::map<std::string, int> globalSent;
-    static std::map<std::string, int> globalKw;
-
     static bool containsAny(const std::string& text, const std::vector<std::string>& keywords) {
         for (const auto& kw : keywords) {
             if (text.find(kw) != std::string::npos) return true;
@@ -35,7 +32,6 @@ public:
             res[s]++;
         }
 
-        globalSent = res;
         return res;
     }
 
@@ -49,16 +45,15 @@ public:
             std::string txt = f.getText();
             for (const auto& entry : Constants::CATEGORY_KEYWORDS) {
                 const std::string& cat = entry.first;
-                if (entry.second.count("main")) {
-                    const auto& kws = entry.second.at("main");
-                    if (containsAny(txt, kws)) {
+                for (const auto& keywordGroup : entry.second) {
+                    if (containsAny(txt, keywordGroup.second)) {
                         res2[cat]++;
+                        break;
                     }
                 }
             }
         }
 
-        globalKw = res2;
         return res2;
     }
 };

@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <iostream>
 #include "Feedback.h"
 #include "Constants.h"
 
@@ -53,7 +52,6 @@ public:
                 if (Constants::CATEGORY_KEYWORDS.count(kFilter)) {
                     const auto& catMap = Constants::CATEGORY_KEYWORDS[kFilter];
                     for (const auto& subEntry : catMap) {
-                        if (subEntry.first == "main") continue;
                         if (containsAny(txt, subEntry.second)) {
                             finalFiltered.push_back(item);
                             break;
@@ -63,10 +61,6 @@ public:
             }
         } else {
             finalFiltered = tmpFiltered;
-        }
-
-        for (const auto& i : finalFiltered) {
-            std::cout << i.getText() << std::endl;
         }
 
         return finalFiltered;
