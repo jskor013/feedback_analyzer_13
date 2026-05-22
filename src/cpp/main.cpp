@@ -336,6 +336,7 @@ int main() {
                     std::string html = renderPage("", "", "", sentimentResults, keywordResults, filtered);
                     res.set_content(html, "text/html; charset=UTF-8");
                 } else {
+                    fil_data.clear();
                     Logger::logWarning(u8"필터링 결과가 없습니다.");
                     std::string html = renderPage("", u8"필터링 결과가 없습니다.", "", {}, {}, {});
                     res.set_content(html, "text/html; charset=UTF-8");
@@ -354,6 +355,11 @@ int main() {
 
     // GET /download
     svr.Get("/download", [](const httplib::Request&, httplib::Response& res) {
+        if (fil_data.empty()) {
+            res.set_content("", "text/csv; charset=UTF-8");
+            return;
+        }
+
         std::ostringstream csv;
         // UTF-8 BOM
         csv << "\xEF\xBB\xBF";
