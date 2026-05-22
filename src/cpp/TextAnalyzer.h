@@ -49,10 +49,10 @@ public:
             std::string txt = f.getText();
             for (const auto& entry : Constants::CATEGORY_KEYWORDS) {
                 const std::string& cat = entry.first;
-                if (entry.second.count("main")) {
-                    const auto& kws = entry.second.at("main");
-                    if (containsAny(txt, kws)) {
+                for (const auto& keywordGroup : entry.second) {
+                    if (containsAny(txt, keywordGroup.second)) {
                         res2[cat]++;
+                        break;
                     }
                 }
             }
