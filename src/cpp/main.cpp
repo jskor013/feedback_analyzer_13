@@ -227,24 +227,59 @@ static std::string renderPage(const std::string& success,
     return html.str();
 }
 
-// Simple CSV line parser
-static std::vector<std::string> parseCsvLine(const std::string& line) {
-    std::vector<std::string> fields;
+static std::vector<std::vector<std::string>> parseCsvRecords(const std::string& content) {
+    std::vector<std::vector<std::string>> records;
+    std::vector<std::string> record;
     std::string field;
     bool inQuotes = false;
-    for (size_t i = 0; i < line.size(); i++) {
-        char c = line[i];
+
+    for (size_t i = 0; i < content.size(); ++i) {
+        const char c = content[i];
         if (c == '"') {
-            inQuotes = !inQuotes;
+            if (inQuotes && i + 1 < content.size() && content[i + 1] == '"') {
+                field += '"';
+                ++i;
+            } else {
+                inQuotes = !inQuotes;
+            }
         } else if (c == ',' && !inQuotes) {
-            fields.push_back(field);
+            record.push_back(field);
+            field.clear();
+        } else if ((c == '\n' || c == '\r') && !inQuotes) {
+            if (c == '\r' && i + 1 < content.size() && content[i + 1] == '\n') {
+                ++i;
+            }
+            record.push_back(field);
+            records.push_back(record);
+            record.clear();
             field.clear();
         } else {
             field += c;
         }
     }
-    fields.push_back(field);
-    return fields;
+
+    if (!field.empty() || !record.empty()) {
+        record.push_back(field);
+        records.push_back(record);
+    }
+    return records;
+}
+
+static std::string escapeCsvField(const std::string& field) {
+    if (field.find_first_of(",\"\r\n") == std::string::npos) {
+        return field;
+    }
+
+    std::string escaped = "\"";
+    for (const char c : field) {
+        if (c == '"') {
+            escaped += "\"\"";
+        } else {
+            escaped += c;
+        }
+    }
+    escaped += '"';
+    return escaped;
 }
 
 int main() {
@@ -310,14 +345,10 @@ int main() {
             if (req.form.has_file("file")) {
                 const auto file = req.form.get_file("file");
                 if (!file.content.empty()) {
-                    std::istringstream stream(file.content);
-                    std::string line;
                     bool firstLine = true;
                     size_t textColumn = 0;
-                    while (std::getline(stream, line)) {
-                        if (!line.empty() && line.back() == '\r') line.pop_back();
-                        if (line.empty()) continue;
-                        auto fields = parseCsvLine(line);
+                    for (const auto& fields : parseCsvRecords(file.content)) {
+                        if (fields.empty() || (fields.size() == 1 && fields[0].empty())) continue;
                         if (firstLine) {
                             firstLine = false;
                             auto header = std::find(fields.begin(), fields.end(), "text");
@@ -393,7 +424,7 @@ int main() {
         csv << "\xEF\xBB\xBF";
         csv << "text\n";
         for (const auto& iter : filtered->second) {
-            csv << iter.getText() << "\n";
+            csv << escapeCsvField(iter.getText()) << "\n";
         }
         res.set_header("Content-Disposition", "attachment; filename=\"filtered_feedback.csv\"");
         res.set_content(csv.str(), "text/csv; charset=UTF-8");
