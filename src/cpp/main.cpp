@@ -79,6 +79,15 @@ static std::string getCurrentTimestamp() {
     return oss.str();
 }
 
+static std::string trimAsciiWhitespace(const std::string& text) {
+    const auto start = text.find_first_not_of(" \t\r\n");
+    if (start == std::string::npos) {
+        return "";
+    }
+    const auto end = text.find_last_not_of(" \t\r\n");
+    return text.substr(start, end - start + 1);
+}
+
 // Escape HTML
 static std::string escapeHtml(const std::string& s) {
     std::string out;
@@ -302,16 +311,15 @@ int main() {
             auto& feedbacks = Session::getCurrentFeedbacks(getSessionId(req));
             auto params = parseForm(req.body);
             std::string text = params["text"];
+            text = trimAsciiWhitespace(text);
 
-            if (!text.empty()) {
-                // trim
-                auto start = text.find_first_not_of(" \t\r\n");
-                auto end = text.find_last_not_of(" \t\r\n");
-                if (start != std::string::npos) {
-                    text = text.substr(start, end - start + 1);
-                    feedbacks.push_back(Feedback(text));
-                }
+            if (text.empty()) {
+                std::string html = renderPage("", u8"유효한 입력을 입력해주세요.", "", {}, {}, feedbacks);
+                res.set_content(html, "text/html; charset=UTF-8");
+                return;
             }
+
+            feedbacks.push_back(Feedback(text));
 
             for (const auto& fb : feedbacks) {
                 Logger::logInfo(fb.getText());
@@ -342,6 +350,13 @@ int main() {
     svr.Post("/upload", [](const httplib::Request& req, httplib::Response& res) {
         try {
             auto& feedbacks = Session::getCurrentFeedbacks(getSessionId(req));
+            if (!req.form.has_file("file")) {
+                std::string html = renderPage("", u8"파일이 선택되지 않았습니다.", "", {}, {}, feedbacks);
+                res.set_content(html, "text/html; charset=UTF-8");
+                return;
+            }
+
+            const auto previousCount = feedbacks.size();
             if (req.form.has_file("file")) {
                 const auto file = req.form.get_file("file");
                 if (!file.content.empty()) {
@@ -363,6 +378,11 @@ int main() {
                     }
                     Logger::logInfo(u8"파일이 성공적으로 업로드되었습니다.");
                 }
+            }
+            if (feedbacks.size() == previousCount) {
+                std::string html = renderPage("", u8"유효한 CSV 피드백이 없습니다.", "", {}, {}, feedbacks);
+                res.set_content(html, "text/html; charset=UTF-8");
+                return;
             }
             std::string success = std::to_string(feedbacks.size()) + u8"개의 피드백이 입력되었습니다.";
             std::string html = renderPage(success, "", "", {}, {}, feedbacks);
