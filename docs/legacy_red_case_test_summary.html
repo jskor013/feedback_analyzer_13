@@ -13,6 +13,23 @@
     h1, h2 {
       margin-bottom: 8px;
     }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 12px;
+      background: #fafafa;
+    }
+    .card strong {
+      display: block;
+      font-size: 20px;
+      margin-top: 4px;
+    }
     table {
       border-collapse: collapse;
       width: 100%;
@@ -31,6 +48,21 @@
       color: #b00020;
       font-weight: bold;
     }
+    .green {
+      color: #0a7a2f;
+      font-weight: bold;
+    }
+    .pending {
+      color: #8a5a00;
+      font-weight: bold;
+    }
+    .fail {
+      color: #b00020;
+      font-weight: bold;
+    }
+    .muted {
+      color: #666;
+    }
     .note {
       background: #fff8df;
       border: 1px solid #e0c46c;
@@ -41,6 +73,50 @@
       background: #f6f6f6;
       padding: 2px 4px;
       border-radius: 3px;
+    }
+    pre {
+      background: #1f1f1f;
+      color: #f8f8f8;
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    .diagram {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid #ccc;
+      background: #fff;
+      margin-top: 16px;
+      padding: 12px;
+    }
+    .class-box {
+      fill: #f8f8f8;
+      stroke: #777;
+      stroke-width: 1.5;
+    }
+    .class-box-red {
+      fill: #ffecec;
+      stroke: #b00020;
+      stroke-width: 2.5;
+    }
+    .class-title {
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .method {
+      font-size: 12px;
+    }
+    .method-red {
+      fill: #b00020;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    .arrow {
+      stroke: #555;
+      stroke-width: 1.5;
+      fill: none;
+      marker-end: url(#arrowhead);
     }
   </style>
 </head>
@@ -60,104 +136,614 @@
     구현 코드와 빌드 스크립트는 수정하지 않았다.
   </div>
 
-  <h2>테스트 케이스 요약</h2>
+  <h2>진행한 전체 테스트 및 검증 요약</h2>
+
+  <div class="summary">
+    <div class="card">자동화 RED CASE<strong>16개</strong></div>
+    <div class="card">문법 검사<strong class="green">통과</strong></div>
+    <div class="card">Linter 진단<strong class="green">통과</strong></div>
+    <div class="card">실제 테스트 실행<strong class="fail">16개 실패</strong></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>검증 항목</th>
+        <th>대상</th>
+        <th>수행 내용</th>
+        <th>결과</th>
+        <th>비고</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>문서 기반 테스트 설계</td>
+        <td><code>docs/Regacy_Code_리팩토링_테스트_계획.md</code>, <code>docs/PRD.md</code></td>
+        <td>RED CASE와 Phase 4 요구사항을 확인해 테스트 후보를 분류했다.</td>
+        <td class="green">완료</td>
+        <td>RED-04, RED-05, RED-14, RED-15를 우선 자동화 대상으로 선정했다.</td>
+      </tr>
+      <tr>
+        <td>테스트 코드 작성</td>
+        <td><code>tests/red_cases/legacy_red_cases_test.cpp</code></td>
+        <td>C++17 기반 RED CASE 테스트 5개를 작성했다.</td>
+        <td class="green">완료</td>
+        <td>Catch2 우선, Catch2 미연결 환경용 fallback runner 포함.</td>
+      </tr>
+      <tr>
+        <td>후속 자동화 테스트 코드 작성</td>
+        <td><code>tests/red_cases/legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>기존 미자동화 항목 RED-01, RED-02, RED-03, RED-06 ~ RED-13 테스트 11개를 추가했다.</td>
+        <td class="green">완료</td>
+        <td><code>src</code> 코드는 수정하지 않고, 테스트 전용 fake <code>httplib</code> 경계로 기존 라우트 람다를 호출한다.</td>
+      </tr>
+      <tr>
+        <td>Linter 진단</td>
+        <td>테스트 코드, HTML 요약 문서</td>
+        <td>IDE 진단을 확인했다.</td>
+        <td class="green">오류 없음</td>
+        <td>경고와 오류가 보고되지 않았다.</td>
+      </tr>
+      <tr>
+        <td>C++17 문법 검사</td>
+        <td><code>legacy_red_cases_test.cpp</code></td>
+        <td><code>g++ -std=c++17 -I src/cpp -fsyntax-only</code> 실행.</td>
+        <td class="green">통과</td>
+        <td>빌드 산출물 생성 없이 문법만 확인했다.</td>
+      </tr>
+      <tr>
+        <td>후속 자동화 테스트 컴파일</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td><code>g++ -std=c++17 -I src/cpp tests/red_cases/legacy_unautomated_red_cases_test.cpp src/cpp/Constants.cpp src/cpp/Filters.cpp src/cpp/Logger.cpp src/cpp/Session.cpp src/cpp/TextAnalyzer.cpp src/cpp/UIComponents.cpp -o build/legacy_unautomated_red_cases_test.exe</code> 실행.</td>
+        <td class="green">통과</td>
+        <td>실제 포트 바인딩 없이 라우트 핸들러를 직접 호출하는 테스트 실행 파일을 생성했다.</td>
+      </tr>
+      <tr>
+        <td>실제 테스트 실행</td>
+        <td><code>build/legacy_red_cases_test.exe</code></td>
+        <td>테스트 전용 실행 파일을 컴파일한 뒤 실행했다.</td>
+        <td class="fail">5개 실패</td>
+        <td>실패는 의도된 RED CASE 재현 결과다. 실행 파일은 빌드 산출물이며 구현 코드와 빌드 스크립트는 수정하지 않았다.</td>
+      </tr>
+      <tr>
+        <td>후속 자동화 테스트 실행</td>
+        <td><code>build/legacy_unautomated_red_cases_test.exe</code></td>
+        <td>미자동화 항목 11개를 추가 실행했다.</td>
+        <td class="fail">11개 실패</td>
+        <td>실패는 현재 레거시 결함을 자동화로 재현한 결과다.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>실제 실행 결과</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>단계</th>
+        <th>명령</th>
+        <th>결과</th>
+        <th>판정</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>컴파일</td>
+        <td><code>g++ -std=c++17 -I src/cpp tests/red_cases/legacy_red_cases_test.cpp src/cpp/Constants.cpp src/cpp/Filters.cpp src/cpp/Logger.cpp src/cpp/Session.cpp src/cpp/TextAnalyzer.cpp -o build/legacy_red_cases_test.exe</code></td>
+        <td>컴파일 성공</td>
+        <td class="green">테스트 실행 가능</td>
+      </tr>
+      <tr>
+        <td>테스트 실행</td>
+        <td><code>build/legacy_red_cases_test.exe</code></td>
+        <td>5개 테스트 실패, 종료 코드 1</td>
+        <td class="fail">RED 확인</td>
+      </tr>
+      <tr>
+        <td>후속 자동화 컴파일</td>
+        <td><code>g++ -std=c++17 -I src/cpp tests/red_cases/legacy_unautomated_red_cases_test.cpp src/cpp/Constants.cpp src/cpp/Filters.cpp src/cpp/Logger.cpp src/cpp/Session.cpp src/cpp/TextAnalyzer.cpp src/cpp/UIComponents.cpp -o build/legacy_unautomated_red_cases_test.exe</code></td>
+        <td>컴파일 성공</td>
+        <td class="green">테스트 실행 가능</td>
+      </tr>
+      <tr>
+        <td>후속 자동화 테스트 실행</td>
+        <td><code>build/legacy_unautomated_red_cases_test.exe</code></td>
+        <td>11개 테스트 실패, 종료 코드 1</td>
+        <td class="fail">RED 확인</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>실행 출력</h3>
+
+  <pre>배송이 빠르고 정확합니다
+[FAIL] RED-04: sentiment analysis and sentiment filtering use the same rules - Requirement failed: sentiment.at(u8"긍정") == static_cast&lt;int&gt;(positiveFiltered.size())
+[FAIL] RED-05: category analysis and category filtering use the same category rules - Requirement failed: keywordResults.at(u8"품질") == static_cast&lt;int&gt;(qualityFiltered.size())
+[FAIL] RED-14: session initialization isolates tests from previous feedback state - Requirement failed: Session::getCurrentFeedbacks().empty()
+[FAIL] RED-15: filtering does not print raw user feedback to stdout - Requirement failed: capture.str().find(sensitiveFeedback) == std::string::npos
+[FAIL] RED-15: debug logging is disabled by default for operations - Requirement failed: !(Logger::isDebugMode())
+LEGACY_RED_CASE_EXIT_CODE=1</pre>
+
+  <h3>후속 자동화 실행 출력 요약</h3>
+
+  <pre>[FAIL] RED-01: empty filter result clears stale download data - Requirement failed: !contains(afterEmptyFilter.body, feedback)
+[FAIL] RED-02: download before filtering reports no downloadable result - Requirement failed: response.headers.count("Content-Disposition") == 0
+[FAIL] RED-03: separate users do not share feedback state - Requirement failed: contains(userBResponse.body, u8"분석할 피드백이 없습니다.")
+[FAIL] RED-06: headerless CSV does not silently drop the first feedback - Requirement failed: Session::getCurrentFeedbacks().size() == 2
+[FAIL] RED-07: CSV upload reads feedback by text column name - Requirement failed: Session::getCurrentFeedbacks().at(0).getText() == u8"올바른 피드백"
+[FAIL] RED-08: CSV download escapes feedback fields containing commas - Requirement failed: contains(response.body, std::string("\"") + feedback + "\"")
+[FAIL] RED-09: CSV parser preserves escaped quotes inside a field - Requirement failed: Session::getCurrentFeedbacks().at(0).getText() == u8"제품에 \"흠집\"이 있어요"
+[FAIL] RED-10: CSV parser preserves newlines inside a quoted field - Requirement failed: Session::getCurrentFeedbacks().size() == 1
+[FAIL] RED-11: whitespace-only feedback is rejected with a clear message - Requirement failed: contains(response.body, u8"유효한 입력")
+[FAIL] RED-12: upload without selecting a file is rejected with a clear message - Requirement failed: contains(response.body, u8"파일이 선택되지")
+[FAIL] RED-13: server start failure returns a failing exit code - Requirement failed: exitCode != 0
+LEGACY_UNAUTOMATED_RED_CASE_EXIT_CODE=1</pre>
+
+  <h2>클래스 다이어그램 및 RED 발생 지점</h2>
+
+  <p>
+    붉은색 클래스는 이번 RED CASE에서 직접 결함이 드러난 클래스다.
+    붉은 굵은 메서드는 RED CASE가 발생한 메서드다.
+    회색 클래스는 현재 구조상 관련은 있지만 이번 자동화 RED CASE의 직접 실패 지점은 아니다.
+  </p>
+
+  <div class="diagram">
+    <svg width="1180" height="620" role="img" aria-label="Legacy class diagram with RED case markers">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#555"></polygon>
+        </marker>
+      </defs>
+
+      <rect x="30" y="30" width="180" height="120" class="class-box"></rect>
+      <text x="45" y="55" class="class-title">main.cpp</text>
+      <text x="45" y="78" class="method">urlDecode()</text>
+      <text x="45" y="98" class="method">parseForm()</text>
+      <text x="45" y="118" class="method">parseCsvLine()</text>
+      <text x="45" y="138" class="method">renderPage()</text>
+
+      <rect x="280" y="30" width="220" height="130" class="class-box-red"></rect>
+      <text x="295" y="55" class="class-title">TextAnalyzer</text>
+      <text x="295" y="82" class="method-red">sent(feedbacks)</text>
+      <text x="295" y="104" class="method-red">kw(feedbacks)</text>
+      <text x="295" y="126" class="method">containsAny()</text>
+      <text x="295" y="148" class="method">globalSent/globalKw</text>
+
+      <rect x="570" y="30" width="220" height="130" class="class-box-red"></rect>
+      <text x="585" y="55" class="class-title">Filters</text>
+      <text x="585" y="82" class="method">initFilterKeywords()</text>
+      <text x="585" y="104" class="method-red">fil(dataList, sFilter, kFilter)</text>
+      <text x="585" y="126" class="method">containsAny()</text>
+      <text x="585" y="148" class="method">S_KEYWORDS</text>
+
+      <rect x="860" y="30" width="220" height="130" class="class-box"></rect>
+      <text x="875" y="55" class="class-title">Constants</text>
+      <text x="875" y="82" class="method">init()</text>
+      <text x="875" y="104" class="method">SENTIMENT_KEYWORDS</text>
+      <text x="875" y="126" class="method">CATEGORY_KEYWORDS</text>
+
+      <rect x="280" y="230" width="220" height="130" class="class-box-red"></rect>
+      <text x="295" y="255" class="class-title">Session</text>
+      <text x="295" y="282" class="method-red">initSessionStateUgly()</text>
+      <text x="295" y="304" class="method">getCurrentFeedbacks()</text>
+      <text x="295" y="326" class="method">updateCurrentFeedbacks()</text>
+      <text x="295" y="348" class="method">currentFeedbacks</text>
+
+      <rect x="570" y="230" width="220" height="130" class="class-box-red"></rect>
+      <text x="585" y="255" class="class-title">Logger</text>
+      <text x="585" y="282" class="method">logInfo()</text>
+      <text x="585" y="304" class="method">logWarning()</text>
+      <text x="585" y="326" class="method">logError()</text>
+      <text x="585" y="348" class="method-red">isDebugMode()</text>
+
+      <rect x="860" y="230" width="220" height="130" class="class-box"></rect>
+      <text x="875" y="255" class="class-title">Feedback</text>
+      <text x="875" y="282" class="method">Feedback(text)</text>
+      <text x="875" y="304" class="method">getText()</text>
+
+      <rect x="30" y="430" width="180" height="120" class="class-box"></rect>
+      <text x="45" y="455" class="class-title">UIComponents</text>
+      <text x="45" y="482" class="method">getCategories()</text>
+      <text x="45" y="504" class="method">CATS</text>
+
+      <rect x="280" y="430" width="220" height="120" class="class-box"></rect>
+      <text x="295" y="455" class="class-title">FileHandler</text>
+      <text x="295" y="482" class="method">saveResult(data)</text>
+      <text x="295" y="504" class="method">save(data)</text>
+      <text x="295" y="526" class="method">stdout 출력</text>
+
+      <path d="M210 70 L280 70" class="arrow"></path>
+      <path d="M210 95 L570 95" class="arrow"></path>
+      <path d="M500 95 L570 95" class="arrow"></path>
+      <path d="M790 95 L860 95" class="arrow"></path>
+      <path d="M500 260 L570 260" class="arrow"></path>
+      <path d="M790 285 L860 285" class="arrow"></path>
+      <path d="M500 125 L860 125" class="arrow"></path>
+      <path d="M680 160 L680 230" class="arrow"></path>
+      <path d="M390 160 L390 230" class="arrow"></path>
+    </svg>
+  </div>
+
+  <h2>클래스·메서드 기준 테스트 케이스 상세</h2>
 
   <table>
     <thead>
       <tr>
         <th>ID</th>
-        <th>테스트명</th>
-        <th>근거 문서</th>
-        <th>결함 설명</th>
-        <th>테스트 입력</th>
-        <th>기대 결과</th>
-        <th>현재 예상 결과</th>
-        <th>Green 전환 기준</th>
+        <th>상태</th>
+        <th>클래스</th>
+        <th>메서드</th>
+        <th>입력</th>
+        <th>현재 출력 또는 관찰 결과</th>
+        <th>기대 출력</th>
+        <th>판정 이유</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td>RED-04</td>
-        <td>감정 분석과 감정 필터 기준 일치</td>
-        <td>리팩토링 테스트 계획 RED-04, PRD 3.6</td>
-        <td>분석 기준과 필터 기준이 서로 달라 같은 피드백을 다르게 판단한다.</td>
-        <td><code>배송이 빠르고 정확합니다</code></td>
-        <td>분석의 긍정 개수와 긍정 필터 결과 개수가 같다.</td>
-        <td class="red">분석은 중립, 필터는 긍정으로 판단할 수 있다.</td>
-        <td>분석과 필터가 같은 감정 판단 기준을 사용한다.</td>
+        <td class="fail">RED 확인</td>
+        <td class="red">TextAnalyzer / Filters</td>
+        <td><span class="red">TextAnalyzer::sent()</span><br><span class="red">Filters::fil()</span></td>
+        <td><code>Feedback("배송이 빠르고 정확합니다")</code><br><code>sFilter="긍정"</code>, <code>kFilter="전체"</code></td>
+        <td><code>Filters::fil()</code> 실행 중 stdout에 <code>배송이 빠르고 정확합니다</code> 출력.<br>검증식 실패: 긍정 분석 개수와 긍정 필터 결과 개수 불일치.</td>
+        <td>분석의 긍정 개수와 긍정 필터 결과 개수가 동일해야 한다.</td>
+        <td>감정 분석은 <code>Constants::SENTIMENT_KEYWORDS</code>, 필터는 <code>Filters::S_KEYWORDS</code>를 사용한다.</td>
       </tr>
       <tr>
         <td>RED-05</td>
-        <td>카테고리 분석과 카테고리 필터 기준 일치</td>
-        <td>리팩토링 테스트 계획 RED-05</td>
-        <td>분석은 대표 키워드 기준을 사용하고 필터는 하위 키워드 중심으로 동작해 결과가 어긋난다.</td>
-        <td><code>제품 품질이 중요합니다</code></td>
-        <td>품질 분석 개수와 품질 필터 결과 개수가 같다.</td>
-        <td class="red">분석에는 포함되지만 필터에서는 제외될 수 있다.</td>
-        <td>분석과 필터가 같은 카테고리 판단 기준을 사용한다.</td>
+        <td class="fail">RED 확인</td>
+        <td class="red">TextAnalyzer / Filters</td>
+        <td><span class="red">TextAnalyzer::kw()</span><br><span class="red">Filters::fil()</span></td>
+        <td><code>Feedback("제품 품질이 중요합니다")</code><br><code>sFilter="전체"</code>, <code>kFilter="품질"</code></td>
+        <td>검증식 실패: 품질 분석 개수와 품질 필터 결과 개수 불일치.</td>
+        <td>품질 분석 개수와 품질 필터 결과 개수가 동일해야 한다.</td>
+        <td>분석은 <code>main</code> 키워드를 포함하지만 필터는 <code>main</code>을 건너뛰고 하위 키워드만 검사한다.</td>
       </tr>
       <tr>
         <td>RED-14</td>
-        <td>세션 초기화 시 이전 피드백 상태 제거</td>
-        <td>리팩토링 테스트 계획 RED-14</td>
-        <td>정적 세션 상태가 테스트와 요청 사이에 남아 상태 오염을 일으킬 수 있다.</td>
-        <td>세션에 <code>이전 테스트 데이터</code> 추가 후 초기화 호출</td>
-        <td>초기화 후 현재 피드백 목록이 비어 있다.</td>
-        <td class="red">초기화 함수가 실제 상태를 비우지 않는다.</td>
-        <td>반복 테스트 실행 시 이전 상태가 다음 테스트에 영향을 주지 않는다.</td>
+        <td class="fail">RED 확인</td>
+        <td class="red">Session</td>
+        <td><span class="red">Session::initSessionStateUgly()</span><br><code>Session::getCurrentFeedbacks()</code></td>
+        <td><code>currentFeedbacks.push_back("이전 테스트 데이터")</code> 후 초기화 호출</td>
+        <td>검증식 실패: <code>Session::getCurrentFeedbacks().empty()</code>가 false.</td>
+        <td><code>currentFeedbacks.empty() == true</code></td>
+        <td>초기화 함수가 실제 상태를 비우지 않고 no-op처럼 동작한다.</td>
       </tr>
       <tr>
         <td>RED-15-A</td>
-        <td>필터링 중 사용자 입력 원문 stdout 출력 금지</td>
-        <td>리팩토링 테스트 계획 RED-15, PRD 3.4, PRD 3.6</td>
-        <td>필터링 로직이 결과 피드백 원문을 표준 출력에 직접 출력해 개인정보 노출 위험을 만든다.</td>
-        <td><code>고객 전화번호 010-1234-5678 포함된 민감 피드백</code></td>
-        <td>표준 출력에 피드백 원문이 포함되지 않는다.</td>
-        <td class="red">필터 결과 피드백 원문이 stdout에 출력될 수 있다.</td>
-        <td>운영 로그와 디버그 출력 정책이 분리되고 원문 출력이 통제된다.</td>
+        <td class="fail">RED 확인</td>
+        <td class="red">Filters</td>
+        <td><span class="red">Filters::fil()</span></td>
+        <td><code>Feedback("고객 전화번호 010-1234-5678 포함된 민감 피드백")</code><br><code>sFilter="전체"</code>, <code>kFilter="전체"</code></td>
+        <td>검증식 실패: 캡처한 stdout에 민감 피드백 원문이 포함됨.</td>
+        <td>stdout에 사용자 입력 원문이 포함되지 않아야 한다.</td>
+        <td>필터링 함수 내부에서 최종 결과의 <code>getText()</code>를 직접 출력한다.</td>
       </tr>
       <tr>
         <td>RED-15-B</td>
-        <td>디버그 로그 기본 비활성화</td>
-        <td>리팩토링 테스트 계획 RED-15, PRD 3.3, PRD 6.3</td>
-        <td>디버그 로그 기본값이 운영 환경에서 원문 또는 내부 정보를 노출할 수 있다.</td>
+        <td class="fail">RED 확인</td>
+        <td class="red">Logger</td>
+        <td><span class="red">Logger::isDebugMode()</span></td>
         <td>애플리케이션 기본 Logger 상태</td>
-        <td>디버그 모드가 기본 비활성화 상태다.</td>
-        <td class="red">디버그 모드가 기본 활성화 상태일 수 있다.</td>
-        <td>DEBUG 로그는 명시적 설정 조건에서만 출력된다.</td>
+        <td>검증식 실패: <code>Logger::isDebugMode()</code>가 true.</td>
+        <td><code>Logger::isDebugMode() == false</code></td>
+        <td>운영 로그 정책상 DEBUG 로그는 명시적 설정 조건에서만 출력되어야 한다.</td>
       </tr>
     </tbody>
   </table>
 
-  <h2>자동화 제외 또는 후속 테스트 후보</h2>
+  <h2>추가 자동화 구현 요약</h2>
+
+  <p>
+    기존 자동화 테스트 아래에 미자동화 항목 11개를 추가했다.
+    <code>src</code> 폴더의 레거시 구현과 빌드 스크립트는 수정하지 않았고,
+    테스트 파일에서만 fake <code>httplib</code> 서버를 제공해 <code>main.cpp</code>의 기존 라우트 람다를 직접 실행했다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>영역</th>
+        <th>자동화 ID</th>
+        <th>구현 방식</th>
+        <th>테스트 파일</th>
+        <th>현재 결과</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>다운로드 상태</td>
+        <td>RED-01, RED-02</td>
+        <td>필터 결과 상태와 <code>/download</code> 응답을 route handler 단위로 검증했다.</td>
+        <td><code>tests/red_cases/legacy_unautomated_red_cases_test.cpp</code></td>
+        <td class="fail">2개 실패</td>
+      </tr>
+      <tr>
+        <td>사용자 상태 경계</td>
+        <td>RED-03</td>
+        <td>서로 다른 세션 헤더를 가진 요청이 같은 전역 피드백 상태를 공유하는지 검증했다.</td>
+        <td><code>tests/red_cases/legacy_unautomated_red_cases_test.cpp</code></td>
+        <td class="fail">1개 실패</td>
+      </tr>
+      <tr>
+        <td>CSV 입력·출력</td>
+        <td>RED-06 ~ RED-10</td>
+        <td><code>/upload</code>, <code>/filter</code>, <code>/download</code> 흐름으로 헤더, 컬럼, 쉼표, 따옴표, 줄바꿈 처리를 검증했다.</td>
+        <td><code>tests/red_cases/legacy_unautomated_red_cases_test.cpp</code></td>
+        <td class="fail">5개 실패</td>
+      </tr>
+      <tr>
+        <td>입력 검증</td>
+        <td>RED-11, RED-12</td>
+        <td>공백 입력과 파일 미선택 업로드가 성공 메시지로 처리되지 않는지 검증했다.</td>
+        <td><code>tests/red_cases/legacy_unautomated_red_cases_test.cpp</code></td>
+        <td class="fail">2개 실패</td>
+      </tr>
+      <tr>
+        <td>서버 시작 실패</td>
+        <td>RED-13</td>
+        <td>fake 서버의 <code>listen()</code> 실패를 주입해 <code>main()</code> 종료 코드 정책을 검증했다.</td>
+        <td><code>tests/red_cases/legacy_unautomated_red_cases_test.cpp</code></td>
+        <td class="fail">1개 실패</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>전체 RED CASE 설계 범위</h2>
 
   <table>
     <thead>
       <tr>
         <th>ID</th>
-        <th>후속 테스트</th>
-        <th>현재 제외 이유</th>
-        <th>자동화 전제</th>
+        <th>대상 클래스 또는 위치</th>
+        <th>대상 메서드</th>
+        <th>자동화 상태</th>
+        <th>현재 판단</th>
+        <th>비고</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>RED-01</td>
+        <td><code>main.cpp</code></td>
+        <td><code>fil_data</code>, <code>/download</code>, <code>/filter</code></td>
+        <td class="green">자동화 완료</td>
+        <td class="fail">RED 확인</td>
+        <td>테스트 전용 fake <code>httplib</code>로 라우트 흐름을 호출해 검증.</td>
+      </tr>
+      <tr>
+        <td>RED-02</td>
+        <td><code>main.cpp</code></td>
+        <td><code>/download</code></td>
+        <td class="green">자동화 완료</td>
+        <td class="fail">RED 확인</td>
+        <td>필터 전 다운로드 응답을 라우트 핸들러 단위로 검증.</td>
+      </tr>
+      <tr>
+        <td>RED-03</td>
+        <td><code>Session</code></td>
+        <td><code>getCurrentFeedbacks()</code></td>
+        <td class="green">자동화 완료</td>
+        <td class="fail">RED 확인</td>
+        <td>서로 다른 세션 헤더 요청이 전역 상태를 공유하는 현재 동작을 검증.</td>
+      </tr>
+      <tr>
+        <td>RED-04</td>
+        <td><code>TextAnalyzer</code>, <code>Filters</code></td>
+        <td><span class="red">sent()</span>, <span class="red">fil()</span></td>
+        <td class="green">자동화 완료</td>
+        <td class="fail">RED 확인</td>
+        <td>테스트 코드에 포함.</td>
+      </tr>
+      <tr>
+        <td>RED-05</td>
+        <td><code>TextAnalyzer</code>, <code>Filters</code></td>
+        <td><span class="red">kw()</span>, <span class="red">fil()</span></td>
+        <td class="green">자동화 완료</td>
+        <td class="fail">RED 확인</td>
+        <td>테스트 코드에 포함.</td>
+      </tr>
+      <tr>
+        <td>RED-06 ~ RED-10</td>
+        <td><code>main.cpp</code></td>
+        <td><code>parseCsvLine()</code>, <code>/upload</code>, <code>/download</code></td>
+        <td class="green">자동화 완료</td>
+        <td class="fail">RED 확인</td>
+        <td>테스트 파일에서 <code>main.cpp</code>를 포함해 static CSV 로직과 라우트 흐름을 같은 번역 단위에서 검증.</td>
+      </tr>
+      <tr>
+        <td>RED-11 / RED-12</td>
+        <td><code>main.cpp</code></td>
+        <td><code>/analyze</code>, <code>/upload</code></td>
+        <td class="green">자동화 완료</td>
+        <td class="fail">RED 확인</td>
+        <td>공백 입력과 파일 미선택 업로드 응답 메시지를 라우트 핸들러 단위로 검증.</td>
+      </tr>
+      <tr>
+        <td>RED-13</td>
+        <td><code>main.cpp</code></td>
+        <td><code>svr.listen()</code></td>
+        <td class="green">자동화 완료</td>
+        <td class="fail">RED 확인</td>
+        <td>fake <code>listen()</code> 실패를 주입해 종료 코드가 실패로 전달되는지 검증.</td>
+      </tr>
+      <tr>
+        <td>RED-14</td>
+        <td><code>Session</code></td>
+        <td><span class="red">initSessionStateUgly()</span></td>
+        <td class="green">자동화 완료</td>
+        <td class="fail">RED 확인</td>
+        <td>테스트 코드에 포함.</td>
+      </tr>
+      <tr>
+        <td>RED-15</td>
+        <td><code>Filters</code>, <code>Logger</code></td>
+        <td><span class="red">fil()</span>, <span class="red">isDebugMode()</span></td>
+        <td class="green">자동화 완료</td>
+        <td class="fail">RED 확인</td>
+        <td>테스트 코드에 2개 케이스로 포함.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>테스트 전용 자동화 접근 및 Green 전환 전제</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>자동화한 테스트</th>
+        <th>테스트 전용 접근</th>
+        <th>Green 전환 전제</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td>RED-01 / RED-02</td>
         <td>필터 결과 없음 이후 다운로드 상태 오염</td>
-        <td><code>main.cpp</code> 내부 전역 다운로드 상태와 HTTP 라우트에 묶여 있어 단위 테스트 접근이 어렵다.</td>
-        <td>다운로드 대상 선택 로직을 테스트 가능한 단위로 분리한다.</td>
+        <td>fake <code>httplib</code> 서버로 <code>/filter</code>, <code>/download</code> 라우트 핸들러를 직접 호출했다.</td>
+        <td>다운로드 대상 선택 로직을 테스트 가능한 단위로 분리하고, 빈 결과 시 이전 <code>fil_data</code>를 재사용하지 않게 한다.</td>
       </tr>
       <tr>
         <td>RED-06 ~ RED-10</td>
         <td>CSV 헤더, 컬럼 위치, 쉼표, 따옴표, 줄바꿈 처리</td>
-        <td>CSV 파서가 <code>main.cpp</code> 내부 static 함수로 존재해 외부 테스트에서 직접 호출할 수 없다.</td>
-        <td>CSV 입력과 출력 책임을 별도 테스트 가능 단위로 분리한다.</td>
+        <td><code>main.cpp</code>를 테스트 번역 단위에 포함해 현재 static 파서와 업로드·다운로드 라우트 흐름을 검증했다.</td>
+        <td>CSV 입력과 출력 책임을 별도 테스트 가능 단위로 분리하고 RFC 스타일 escaping 정책을 명확히 한다.</td>
       </tr>
       <tr>
         <td>RED-13</td>
         <td>서버 시작 실패 미보고</td>
-        <td>서버 시작 결과 확인이 실행 흐름에 직접 포함되어 있어 프로세스 레벨 통합 테스트가 필요하다.</td>
+        <td>fake <code>listen()</code> 실패를 주입해 <code>main()</code> 종료 코드가 실패를 반영하는지 검증했다.</td>
         <td>서버 시작 결과를 반환하는 경계를 만들고 포트 충돌 통합 테스트를 구성한다.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>자동화 후 RED-TEST 결과</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>자동화 테스트</th>
+        <th>검증 대상</th>
+        <th>실행 결과</th>
+        <th>RED 실패 요약</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>RED-01</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>빈 필터 결과 이후 다운로드 상태</td>
+        <td class="fail">FAIL</td>
+        <td>빈 결과 필터 후에도 이전 다운로드 데이터가 남아 있다.</td>
+      </tr>
+      <tr>
+        <td>RED-02</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>필터 전 <code>/download</code></td>
+        <td class="fail">FAIL</td>
+        <td>다운로드할 결과가 없어도 CSV attachment 응답을 생성한다.</td>
+      </tr>
+      <tr>
+        <td>RED-03</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>사용자별 피드백 상태</td>
+        <td class="fail">FAIL</td>
+        <td>다른 세션 요청에서도 이전 사용자의 전역 피드백을 분석한다.</td>
+      </tr>
+      <tr>
+        <td>RED-04</td>
+        <td><code>legacy_red_cases_test.cpp</code></td>
+        <td>감정 분석과 감정 필터 기준</td>
+        <td class="fail">FAIL</td>
+        <td>긍정 분석 개수와 긍정 필터 결과 개수가 불일치한다.</td>
+      </tr>
+      <tr>
+        <td>RED-05</td>
+        <td><code>legacy_red_cases_test.cpp</code></td>
+        <td>카테고리 분석과 카테고리 필터 기준</td>
+        <td class="fail">FAIL</td>
+        <td>품질 분석 개수와 품질 필터 결과 개수가 불일치한다.</td>
+      </tr>
+      <tr>
+        <td>RED-06</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>헤더 없는 CSV</td>
+        <td class="fail">FAIL</td>
+        <td>첫 번째 데이터 행을 헤더로 간주해 조용히 유실한다.</td>
+      </tr>
+      <tr>
+        <td>RED-07</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>CSV 텍스트 컬럼 위치</td>
+        <td class="fail">FAIL</td>
+        <td>컬럼명을 보지 않고 첫 번째 컬럼 값을 피드백으로 저장한다.</td>
+      </tr>
+      <tr>
+        <td>RED-08</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>쉼표 포함 CSV 다운로드</td>
+        <td class="fail">FAIL</td>
+        <td>쉼표가 포함된 피드백을 CSV 필드로 escaping하지 않는다.</td>
+      </tr>
+      <tr>
+        <td>RED-09</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>따옴표 포함 CSV 업로드</td>
+        <td class="fail">FAIL</td>
+        <td>CSV escaped quote를 원문 따옴표로 보존하지 못한다.</td>
+      </tr>
+      <tr>
+        <td>RED-10</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>줄바꿈 포함 CSV 업로드</td>
+        <td class="fail">FAIL</td>
+        <td>따옴표 안 줄바꿈을 하나의 필드로 유지하지 못한다.</td>
+      </tr>
+      <tr>
+        <td>RED-11</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>공백 입력 검증</td>
+        <td class="fail">FAIL</td>
+        <td>공백 입력이 명확한 오류가 아니라 성공 메시지 흐름으로 처리된다.</td>
+      </tr>
+      <tr>
+        <td>RED-12</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>파일 미선택 업로드 검증</td>
+        <td class="fail">FAIL</td>
+        <td>파일 미선택 상태가 명확한 오류 메시지로 표시되지 않는다.</td>
+      </tr>
+      <tr>
+        <td>RED-13</td>
+        <td><code>legacy_unautomated_red_cases_test.cpp</code></td>
+        <td>서버 시작 실패</td>
+        <td class="fail">FAIL</td>
+        <td><code>listen()</code> 실패가 <code>main()</code> 실패 종료 코드로 전달되지 않는다.</td>
+      </tr>
+      <tr>
+        <td>RED-14</td>
+        <td><code>legacy_red_cases_test.cpp</code></td>
+        <td>세션 초기화 상태 격리</td>
+        <td class="fail">FAIL</td>
+        <td>초기화 호출 후에도 이전 피드백 상태가 남아 있다.</td>
+      </tr>
+      <tr>
+        <td>RED-15-A</td>
+        <td><code>legacy_red_cases_test.cpp</code></td>
+        <td>필터링 중 사용자 원문 stdout 출력</td>
+        <td class="fail">FAIL</td>
+        <td>필터링 함수가 민감 피드백 원문을 stdout에 출력한다.</td>
+      </tr>
+      <tr>
+        <td>RED-15-B</td>
+        <td><code>legacy_red_cases_test.cpp</code></td>
+        <td>기본 debug logging 상태</td>
+        <td class="fail">FAIL</td>
+        <td>기본 Logger debug mode가 활성화되어 있다.</td>
       </tr>
     </tbody>
   </table>
