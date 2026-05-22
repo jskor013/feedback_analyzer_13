@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>RED Case Development Report</title>
+  <style>
+    body { font-family: "Segoe UI", Arial, sans-serif; margin: 32px; color: #222; line-height: 1.5; }
+    h1, h2 { color: #1f2937; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0 28px; }
+    th, td { border: 1px solid #d1d5db; padding: 8px 10px; vertical-align: top; }
+    th { background: #f3f4f6; }
+    code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; }
+    .green { color: #047857; font-weight: 700; }
+    .note { background: #fffbeb; border: 1px solid #fcd34d; padding: 10px 12px; }
+  </style>
+</head>
+<body>
+  <h1>RED Case Development Report</h1>
+  <p>작업 기준: <code>docs/RED_단계_개선_작업지시서.md</code></p>
+  <p>제약: 테스트 코드 변경 금지, <code>src</code> 폴더 내 코드 최소 수정으로 테스트 통과.</p>
+
+  <h2>최종 테스트 결과</h2>
+  <ul>
+    <li><code>cmake --build build</code>: <span class="green">GREEN</span>, <code>[100%] Built target feedback_analyzer</code></li>
+    <li><code>build\legacy_red_cases_test.exe</code>: <span class="green">GREEN</span>, RED-04, RED-05, RED-14, RED-15-A, RED-15-B 모두 PASS</li>
+    <li><code>build\legacy_unautomated_red_cases_test.exe</code>: <span class="green">GREEN</span>, RED-01, RED-02, RED-03, RED-06~RED-13 모두 PASS, <code>LEGACY_UNAUTOMATED_RED_CASE_EXIT_CODE=0</code></li>
+  </ul>
+
+  <h2>TC별 개발 내역</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>TC</th>
+        <th>목표</th>
+        <th>주요 코드 변경</th>
+        <th>관련 커밋</th>
+        <th>결과</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>RED-01</td>
+        <td>빈 필터 결과 이후 stale download 방지</td>
+        <td><code>main.cpp</code>에서 빈 필터 결과 시 세션별 다운로드 대상 삭제, 다운로드 대상 없을 때 빈 응답 반환</td>
+        <td><code>db19147</code>, <code>4a98f18</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-02</td>
+        <td>필터 전 다운로드 attachment 방지</td>
+        <td>세션별 필터 결과가 없으면 <code>Content-Disposition</code> 없이 빈 CSV 응답</td>
+        <td><code>db19147</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-03</td>
+        <td>사용자별 피드백 상태 분리</td>
+        <td><code>Session</code>에 <code>sid</code> 기반 피드백 저장소 추가, analyze/filter/upload에서 세션별 상태 사용</td>
+        <td><code>93ab977</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-04</td>
+        <td>감정 분석과 감정 필터 기준 단일화</td>
+        <td><code>Filters</code>가 <code>Constants::SENTIMENT_KEYWORDS</code>를 사용하도록 변경, 누락 긍정 키워드 보강</td>
+        <td><code>7c1ea3e</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-05</td>
+        <td>카테고리 분석과 필터 기준 단일화</td>
+        <td>분석과 필터 모두 카테고리 키워드 그룹 전체를 같은 방식으로 매칭</td>
+        <td><code>26c1f45</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-06</td>
+        <td>헤더 없는 CSV 첫 데이터 유실 방지</td>
+        <td>첫 행이 <code>text</code> 헤더가 아니면 데이터 행으로 처리</td>
+        <td><code>9451952</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-07</td>
+        <td>CSV 텍스트 컬럼명 기반 읽기</td>
+        <td><code>text</code> 헤더 위치를 찾아 해당 컬럼을 피드백으로 저장</td>
+        <td><code>9451952</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-08</td>
+        <td>쉼표 포함 피드백 CSV 다운로드 escaping</td>
+        <td><code>FileHandler::escapeCsvField</code>로 쉼표, 따옴표, 줄바꿈 필드 표준 escaping</td>
+        <td><code>a5f4812</code>, <code>811ab51</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-09</td>
+        <td>CSV escaped quote 보존</td>
+        <td><code>FileHandler::parseCsvRecords</code>에서 <code>""</code>를 필드 내 따옴표로 복원</td>
+        <td><code>a5f4812</code>, <code>811ab51</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-10</td>
+        <td>quoted newline 보존</td>
+        <td>줄 단위 파싱 대신 quoted field 상태를 유지하는 레코드 파서 사용</td>
+        <td><code>a5f4812</code>, <code>811ab51</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-11</td>
+        <td>공백-only 피드백 거부</td>
+        <td><code>trimAsciiWhitespace</code> 적용 후 빈 입력이면 저장하지 않고 안내 메시지 렌더링</td>
+        <td><code>a827b3d</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-12</td>
+        <td>파일 미선택 업로드 거부</td>
+        <td>업로드 파일이 없으면 성공 메시지 대신 <code>파일이 선택되지 않았습니다.</code> 안내</td>
+        <td><code>a827b3d</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-13</td>
+        <td>서버 시작 실패를 실패 종료 코드로 반환</td>
+        <td><code>listen</code> 반환값 확인, 실패 시 ERROR 로그와 <code>return 1</code></td>
+        <td><code>7797fc5</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-14</td>
+        <td>세션 초기화 시 이전 피드백 오염 제거</td>
+        <td><code>Session::initSessionStateUgly</code>가 기본/세션별 피드백 상태를 clear</td>
+        <td><code>93ab977</code>, <code>bdbcc87</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-15-A</td>
+        <td>필터링 중 원문 stdout 출력 금지</td>
+        <td><code>Filters::fil</code>의 피드백 원문 <code>std::cout</code> 출력 제거</td>
+        <td><code>504d777</code></td>
+        <td class="green">PASS</td>
+      </tr>
+      <tr>
+        <td>RED-15-B</td>
+        <td>DEBUG 로그 기본 비활성화</td>
+        <td><code>Logger::debugMode</code> 기본값을 <code>false</code>로 변경, 분석 원문 INFO 로그 제거</td>
+        <td><code>504d777</code></td>
+        <td class="green">PASS</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>구조 정리 커밋</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>지시서 커밋</th>
+        <th>변경 내용</th>
+        <th>커밋</th>
+        <th>검증</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Commit 10</td>
+        <td>HTML 응답 설정을 <code>setHtmlResponse</code>로 분리</td>
+        <td><code>5ca0486</code></td>
+        <td class="green">회귀 없음</td>
+      </tr>
+      <tr>
+        <td>Commit 11</td>
+        <td>CSV import/export 로직을 <code>FileHandler</code> 정적 함수로 분리</td>
+        <td><code>811ab51</code></td>
+        <td class="green">RED-06~10 회귀 없음</td>
+      </tr>
+      <tr>
+        <td>Commit 12</td>
+        <td>분석 결과 생성을 <code>AnalysisResult</code>/<code>analyzeFeedbacks</code> 흐름으로 분리</td>
+        <td><code>bdbcc87</code></td>
+        <td class="green">RED-04/05/14 회귀 없음</td>
+      </tr>
+      <tr>
+        <td>Commit 13</td>
+        <td>테스트 보강 커밋은 사용자 제약인 테스트 코드 변경 금지 때문에 수행하지 않음</td>
+        <td>해당 없음</td>
+        <td>최종 자동화 RED 전체 Green으로 대체 확인</td>
+      </tr>
+      <tr>
+        <td>Commit 14</td>
+        <td>사용하지 않는 <code>FileHandler</code> 출력 메서드, 전역 분석 누적 상태, 미사용 인스턴스 제거</td>
+        <td><code>d5af463</code></td>
+        <td class="green">회귀 없음</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="note">최종 산출 시점에 테스트 코드는 변경하지 않았으며, 기능 개발 커밋은 모두 <code>src</code> 하위 파일만 수정했다.</p>
+</body>
+</html>
