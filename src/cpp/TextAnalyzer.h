@@ -4,56 +4,46 @@
 #include <map>
 #include "Feedback.h"
 #include "Constants.h"
+#include "FeedbackClassifier.h"
 
 class TextAnalyzer {
-private:
-    static bool containsAny(const std::string& text, const std::vector<std::string>& keywords) {
-        for (const auto& kw : keywords) {
-            if (text.find(kw) != std::string::npos) return true;
-        }
-        return false;
-    }
-
 public:
-    std::map<std::string, int> sent(const std::vector<Feedback>& feedbacks) {
+    std::map<std::string, int> analyzeSentiment(const std::vector<Feedback>& feedbacks) {
         std::map<std::string, int> res;
         res[u8"긍정"] = 0;
         res[u8"중립"] = 0;
         res[u8"부정"] = 0;
 
         for (const auto& f : feedbacks) {
-            std::string txt = f.getText();
-            std::string s = u8"중립";
-            if (containsAny(txt, Constants::SENTIMENT_KEYWORDS[u8"긍정"])) {
-                s = u8"긍정";
-            } else if (containsAny(txt, Constants::SENTIMENT_KEYWORDS[u8"부정"])) {
-                s = u8"부정";
-            }
-            res[s]++;
+            res[FeedbackClassifier::classifySentiment(f)]++;
         }
 
         return res;
     }
 
-    std::map<std::string, int> kw(const std::vector<Feedback>& feedbacks) {
+    std::map<std::string, int> analyzeCategories(const std::vector<Feedback>& feedbacks) {
         std::map<std::string, int> res2;
         for (const auto& entry : Constants::CATEGORY_KEYWORDS) {
             res2[entry.first] = 0;
         }
 
         for (const auto& f : feedbacks) {
-            std::string txt = f.getText();
             for (const auto& entry : Constants::CATEGORY_KEYWORDS) {
                 const std::string& cat = entry.first;
-                for (const auto& keywordGroup : entry.second) {
-                    if (containsAny(txt, keywordGroup.second)) {
-                        res2[cat]++;
-                        break;
-                    }
+                if (FeedbackClassifier::matchesCategory(f, cat)) {
+                    res2[cat]++;
                 }
             }
         }
 
         return res2;
+    }
+
+    std::map<std::string, int> sent(const std::vector<Feedback>& feedbacks) {
+        return analyzeSentiment(feedbacks);
+    }
+
+    std::map<std::string, int> kw(const std::vector<Feedback>& feedbacks) {
+        return analyzeCategories(feedbacks);
     }
 };

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback Analyzer 리팩토링 실습 발표</title>
+    <style>
+        :root {
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --ink: #1f2937;
+            --muted: #5f6b7a;
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --border: #dbe3ef;
+            --code-bg: #111827;
+            --code-ink: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, #eff6ff 0%, var(--bg) 42%, #ecfdf5 100%);
+            color: var(--ink);
+            font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
+            line-height: 1.7;
+        }
+
+        .page {
+            width: min(1080px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 48px 0 64px;
+        }
+
+        header {
+            padding: 56px 48px;
+            border-radius: 28px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 24px 70px rgba(37, 99, 235, 0.24);
+        }
+
+        header .label {
+            display: inline-block;
+            margin-bottom: 16px;
+            padding: 6px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 999px;
+            font-size: 14px;
+            letter-spacing: 0.04em;
+        }
+
+        h1 {
+            margin: 0 0 18px;
+            font-size: clamp(34px, 5vw, 56px);
+            line-height: 1.15;
+        }
+
+        header p {
+            max-width: 760px;
+            margin: 0;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 20px;
+        }
+
+        .deck {
+            display: grid;
+            gap: 28px;
+            margin-top: 32px;
+        }
+
+        section {
+            padding: 34px 38px;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 16px 50px rgba(15, 23, 42, 0.08);
+        }
+
+        h2 {
+            margin: 0 0 18px;
+            color: var(--primary-dark);
+            font-size: 28px;
+        }
+
+        p {
+            margin: 0 0 16px;
+        }
+
+        ul {
+            margin: 0;
+            padding-left: 22px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        .compare {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            margin-top: 18px;
+        }
+
+        .panel {
+            padding: 22px;
+            border-radius: 18px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+        }
+
+        .panel h3 {
+            margin: 0 0 12px;
+            font-size: 20px;
+        }
+
+        .before h3 {
+            color: var(--danger);
+        }
+
+        .after h3 {
+            color: var(--accent);
+        }
+
+        code {
+            padding: 2px 5px;
+            border-radius: 6px;
+            background: #eef2ff;
+            color: #3730a3;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.95em;
+        }
+
+        pre {
+            overflow-x: auto;
+            margin: 18px 0;
+            padding: 20px;
+            border-radius: 16px;
+            background: var(--code-bg);
+            color: var(--code-ink);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        pre code {
+            padding: 0;
+            background: transparent;
+            color: inherit;
+        }
+
+        blockquote {
+            margin: 22px 0;
+            padding: 22px 26px;
+            border-left: 6px solid var(--primary);
+            border-radius: 16px;
+            background: #eff6ff;
+            color: #1e3a8a;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .pill-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 0;
+            list-style: none;
+        }
+
+        .pill-list li {
+            margin: 0;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #312e81;
+            font-weight: 600;
+        }
+
+        .closing {
+            border-color: rgba(16, 185, 129, 0.35);
+            background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);
+        }
+
+        @media (max-width: 760px) {
+            .page {
+                width: min(100% - 24px, 1080px);
+                padding: 24px 0 40px;
+            }
+
+            header,
+            section {
+                padding: 28px 22px;
+                border-radius: 20px;
+            }
+
+            .compare {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+
+            .page {
+                width: 100%;
+                padding: 0;
+            }
+
+            header,
+            section {
+                box-shadow: none;
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header>
+            <span class="label">5분 발표 자료</span>
+            <h1>Feedback Analyzer 리팩토링 실습 발표</h1>
+            <p>Before/After 코드 비교와 AI 활용 경험을 중심으로 정리한 발표용 HTML 자료입니다.</p>
+        </header>
+
+        <div class="deck">
+            <section>
+                <h2>1. 프로젝트 소개</h2>
+                <p>이번 실습 프로젝트는 C++ 기반 고객 피드백 분석 시스템입니다.</p>
+                <p>사용자는 웹 화면에서 피드백을 직접 입력하거나 CSV로 업로드할 수 있고, 시스템은 감정 분석, 키워드 분류, 필터링, CSV 다운로드 기능을 제공합니다.</p>
+                <p>이번 실습의 핵심은 새로운 기능을 추가하는 것이 아니라, 기존 레거시 코드의 문제를 테스트로 드러내고 안정적으로 리팩토링하는 것이었습니다.</p>
+            </section>
+
+            <section>
+                <h2>2. Before: 동작은 하지만 신뢰하기 어려운 코드</h2>
+                <p>리팩토링 전 코드는 기능은 있었지만 유지보수와 검증이 어려운 구조였습니다.</p>
+                <ul>
+                    <li>HTTP 라우트 안에서 입력 파싱, 상태 변경, 분석, 렌더링, 로깅이 한꺼번에 처리됨</li>
+                    <li>필터 결과 다운로드가 이전 결과를 재사용하는 stale data 문제</li>
+                    <li>사용자 세션 간 피드백 또는 다운로드 상태가 섞일 수 있는 전역 상태 문제</li>
+                    <li>감정 분석 기준과 감정 필터 기준이 서로 다름</li>
+                    <li>CSV에서 쉼표, 따옴표, 줄바꿈이 포함된 데이터가 깨질 수 있음</li>
+                    <li>공백 입력, 파일 미선택, 서버 시작 실패 같은 실패 상황이 명확하지 않음</li>
+                    <li>기본 로그에 사용자 입력 원문이 노출될 수 있는 위험</li>
+                </ul>
+                <p>즉, "돌아가는 코드"였지만 변경할 때마다 회귀 위험이 큰 상태였습니다.</p>
+            </section>
+
+            <section>
+                <h2>3. After: 책임을 나누고 테스트로 보호한 코드</h2>
+                <p>리팩토링 후에는 역할을 분리하고, 테스트로 기존 동작을 보호하는 방향으로 개선했습니다.</p>
+
+                <pre><code>int main() {
+    Constants::init();
+    Filters::initFilterKeywords();
+
+    httplib::Server svr;
+
+    svr.Get("/", RequestHandlers::handleIndex);
+    svr.Post("/analyze", RequestHandlers::handleAnalyze);
+    svr.Post("/upload", RequestHandlers::handleUpload);
+    svr.Post("/filter", RequestHandlers::handleFilter);
+    svr.Get("/download", RequestHandlers::handleDownload);
+}</code></pre>
+
+                <p><code>main.cpp</code>는 서버 초기화와 라우트 등록에 집중하고, 요청 처리 흐름은 <code>RequestHandlers</code>로 분리했습니다.</p>
+
+                <pre><code>auto filtered = filters().filterFeedbacks(feedbacks, sentiment, keyword);
+if (!filtered.empty()) {
+    FilteredResultStore::save(sessionId, filtered);
+} else {
+    FilteredResultStore::clear(sessionId);
+}</code></pre>
+
+                <p>필터링 결과는 세션 ID 기준으로 저장하고, 결과가 없으면 다운로드 상태를 명확히 비우도록 바꿨습니다.</p>
+
+                <div class="compare">
+                    <div class="panel before">
+                        <h3>Before</h3>
+                        <ul>
+                            <li>요청 처리와 화면 렌더링이 섞임</li>
+                            <li>이전 필터 결과가 다운로드에 남을 수 있음</li>
+                            <li>분석과 필터 기준이 분리됨</li>
+                        </ul>
+                    </div>
+                    <div class="panel after">
+                        <h3>After</h3>
+                        <ul>
+                            <li>서버, 요청 처리, 렌더링 책임 분리</li>
+                            <li>세션별 필터 결과 저장소 도입</li>
+                            <li>공통 분류 규칙과 CSV 서비스 분리</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>4. 개선된 구조</h2>
+                <ul class="pill-list">
+                    <li><code>main.cpp</code>: 서버 시작과 라우팅</li>
+                    <li><code>RequestHandlers</code>: 요청 처리 흐름</li>
+                    <li><code>Session</code>, <code>FilteredResultStore</code>: 사용자별 상태 관리</li>
+                    <li><code>FeedbackClassifier</code>: 감정과 카테고리 판단 규칙</li>
+                    <li><code>CsvFeedbackImporter</code>, <code>CsvFeedbackExporter</code>: CSV 입출력</li>
+                    <li><code>FeedbackPageRenderer</code>, <code>FeedbackPageViewModel</code>: 화면 렌더링</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>5. 테스트 전략: Golden Master와 RED Case</h2>
+                <p>이번 실습에서 가장 중요했던 점은 리팩토링 전에 테스트 안전망을 만든 것입니다.</p>
+                <p>Golden Master 테스트는 기존 정상 동작을 보존하기 위한 기준이었습니다. 초기 화면 렌더링, 직접 입력 분석, CSV 업로드, 필터, 다운로드, 서버 시작 실패 처리, 로그 개인정보 보호 흐름을 보호했습니다.</p>
+                <p>RED Case 테스트는 기존 결함을 의도적으로 드러내는 테스트였습니다.</p>
+                <ul>
+                    <li>필터 결과 없음 이후 이전 다운로드 결과 재사용</li>
+                    <li>사용자 세션 간 데이터 섞임</li>
+                    <li>감정 분석과 필터 기준 불일치</li>
+                    <li>CSV 특수문자 처리 실패</li>
+                    <li>공백 입력 허용</li>
+                    <li>기본 로그에 사용자 원문 노출</li>
+                </ul>
+                <p>이후 리팩토링은 <code>ctest</code> 기반으로 반복 검증하면서 진행할 수 있게 되었습니다.</p>
+            </section>
+
+            <section>
+                <h2>6. AI 활용 경험</h2>
+                <p>AI는 이번 실습에서 단순 코드 작성 도구라기보다, 리팩토링 파트너에 가까웠습니다.</p>
+                <ul>
+                    <li>레거시 코드의 문제를 기능 단위가 아니라 실패 시나리오 단위로 정리하는 데 도움을 받았습니다.</li>
+                    <li>RED Case와 Golden Master 테스트를 기준으로 작업 순서를 나눌 수 있었습니다.</li>
+                    <li>리팩토링 중에 "이 변경이 사용자 동작을 바꾸는가?", "전역 상태가 늘어나는가?", "테스트로 보호되는가?" 같은 리뷰 관점의 질문을 계속 던질 수 있었습니다.</li>
+                </ul>
+                <p>다만 AI가 항상 정답을 주는 것은 아니었습니다. 그래서 테스트 기대값을 낮추지 않고, 기존 동작은 Golden Master로 고정하며, 최종 판단은 사람이 하는 방식이 중요했습니다.</p>
+            </section>
+
+            <section class="closing">
+                <h2>7. 배운 점</h2>
+                <blockquote>리팩토링은 코드를 예쁘게 바꾸는 작업이 아니라, 변경 가능한 구조를 만들면서 기존 동작을 지키는 작업이다.</blockquote>
+                <p>Before 코드는 기능은 있었지만 책임이 섞여 있어 변경이 두려운 코드였습니다.</p>
+                <p>After 코드는 책임을 나누고, 실패 사례를 테스트로 고정하고, AI를 활용해 더 빠르게 구조를 개선한 코드가 되었습니다.</p>
+                <p>결론적으로 AI를 잘 활용하려면 "코드를 대신 짜게 하는 것"보다 "문제를 테스트 가능한 단위로 쪼개고, 변경 위험을 계속 점검하게 하는 것"이 더 효과적이었습니다.</p>
+            </section>
+        </div>
+    </main>
+</body>
+</html>

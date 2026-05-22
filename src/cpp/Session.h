@@ -8,17 +8,32 @@ class Session {
 private:
     static std::vector<Feedback> currentFeedbacks;
     static std::map<std::string, std::vector<Feedback>> sessionFeedbacks;
-    static std::map<std::string, std::string> internalData;
-    static std::map<std::string, std::string> filterOptions;
 
 public:
-    static void initSessionStateUgly() {
+    static constexpr const char* DEFAULT_SESSION_ID = "default";
+
+    static void resetAll() {
         currentFeedbacks.clear();
         sessionFeedbacks.clear();
     }
 
-    static std::vector<Feedback>& getOldDataFromSession(const std::string& key) {
+    static std::vector<Feedback>& defaultFeedbacks() {
         return currentFeedbacks;
+    }
+
+    static std::vector<Feedback>& feedbacksForSession(const std::string& sessionId) {
+        if (sessionId == DEFAULT_SESSION_ID) {
+            return currentFeedbacks;
+        }
+        return sessionFeedbacks[sessionId];
+    }
+
+    static void initSessionStateUgly() {
+        resetAll();
+    }
+
+    static std::vector<Feedback>& getOldDataFromSession(const std::string& key) {
+        return defaultFeedbacks();
     }
 
     static void updateCurrentFeedbacks(const std::vector<Feedback>& feedbacks) {
@@ -27,13 +42,10 @@ public:
     }
 
     static std::vector<Feedback>& getCurrentFeedbacks() {
-        return currentFeedbacks;
+        return defaultFeedbacks();
     }
 
     static std::vector<Feedback>& getCurrentFeedbacks(const std::string& sessionId) {
-        if (sessionId == "default") {
-            return currentFeedbacks;
-        }
-        return sessionFeedbacks[sessionId];
+        return feedbacksForSession(sessionId);
     }
 };
