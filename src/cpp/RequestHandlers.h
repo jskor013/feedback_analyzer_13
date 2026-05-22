@@ -108,12 +108,12 @@ struct AnalysisResult {
 };
 
 inline AnalysisResult analyzeFeedbacks(const std::vector<Feedback>& feedbacks) {
-    return {textAnalyzer().sent(feedbacks), textAnalyzer().kw(feedbacks)};
+    return {textAnalyzer().analyzeSentiment(feedbacks), textAnalyzer().analyzeCategories(feedbacks)};
 }
 
 inline void handleIndex(const httplib::Request&, httplib::Response& res) {
-    Session::initSessionStateUgly();
-    auto& feedbacks = Session::getOldDataFromSession("current_feedbacks");
+    Session::resetAll();
+    auto& feedbacks = Session::defaultFeedbacks();
     setHtmlResponse(res, renderPage(u8"피드백 분석기 시작", "", "", {}, {}, feedbacks));
 }
 
@@ -184,7 +184,7 @@ inline void handleFilter(const httplib::Request& req, httplib::Response& res) {
         std::string keyword = params["keyword"];
 
         if (!feedbacks.empty()) {
-            auto filtered = filters().fil(feedbacks, sentiment, keyword);
+            auto filtered = filters().filterFeedbacks(feedbacks, sentiment, keyword);
             if (!filtered.empty()) {
                 FilteredResultStore::save(sessionId, filtered);
                 auto analysis = analyzeFeedbacks(filtered);
