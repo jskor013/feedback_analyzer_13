@@ -99,8 +99,57 @@
       padding: 14px 16px;
       color: #7c2d12;
     }
+    .uml-panel {
+      border: 1px solid #d9e2ec;
+      border-radius: 14px;
+      background: #fbfdff;
+      padding: 20px;
+      overflow-x: auto;
+    }
+    .mermaid {
+      min-width: 760px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      font-family: Consolas, "Courier New", monospace;
+    }
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 12px 0 24px;
+      font-size: 13px;
+    }
+    .legend-item {
+      background: #f8fafc;
+      border: 1px solid #d9e2ec;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .change-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0 28px;
+    }
+    .change-card {
+      border: 1px solid #d9e2ec;
+      border-radius: 12px;
+      padding: 14px;
+      background: #ffffff;
+    }
+    .change-card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #1d4ed8;
+    }
     @media (max-width: 900px) {
       .grid {
+        grid-template-columns: 1fr;
+      }
+      .legend,
+      .change-summary {
         grid-template-columns: 1fr;
       }
     }
@@ -180,131 +229,301 @@
       </tbody>
     </table>
 
-    <h2>3. 변경 전/후 클래스 다이어그램 비교</h2>
-    <div class="grid">
-      <section class="panel">
-        <h3>변경 전</h3>
-        <div class="diagram">
-          <div class="class-box">
-            <div class="class-name">main.cpp</div>
-            <div class="class-body">+ getSessionId()
-+ parseForm()
-+ renderPage()
-+ analyzeFeedbacks()
-+ route lambdas
-+ fil_data
-+ server listen()</div>
-          </div>
-          <div class="relation">main.cpp가 요청 처리, 상태, CSV, 분석/필터, 렌더링, 로그 호출을 직접 조정</div>
-          <div class="class-box">
-            <div class="class-name">Session</div>
-            <div class="class-body">+ initSessionStateUgly()
-+ getOldDataFromSession()
-+ getCurrentFeedbacks()</div>
-          </div>
-          <div class="class-box">
-            <div class="class-name">TextAnalyzer</div>
-            <div class="class-body">+ sent()
-+ kw()
-- containsAny()</div>
-          </div>
-          <div class="class-box">
-            <div class="class-name">Filters</div>
-            <div class="class-body">+ fil()
-+ initFilterKeywords()
-- containsAny()
-- S_KEYWORDS</div>
-          </div>
-          <div class="class-box">
-            <div class="class-name">FileHandler</div>
-            <div class="class-body">+ parseCsvRecords()
-+ escapeCsvField()</div>
-          </div>
-          <div class="class-box">
-            <div class="class-name">Logger</div>
-            <div class="class-body">+ logInfo()
-+ logWarning()
-+ logError()
-+ logDebug()
-- getTimestamp()</div>
-          </div>
-        </div>
-      </section>
+    <h2>3. 변경 전/후 UML 클래스 다이어그램 비교</h2>
+    <p>
+      아래 다이어그램은 단순 클래스 목록이 아니라 의존 방향, 상태 소유, Boundary/Control/Domain 분리 여부를 표현한다.
+      변경 전에는 <strong>main.cpp가 대부분의 클래스를 직접 조정하는 허브</strong>였고, 변경 후에는 요청 처리, 상태 저장,
+      분류 규칙, CSV, 렌더링, 로깅이 독립된 협력 객체로 분리되었다.
+    </p>
 
-      <section class="panel">
-        <h3>변경 후</h3>
-        <div class="diagram">
-          <div class="class-box">
-            <div class="class-name">main.cpp</div>
-            <div class="class-body">+ route registration
-+ server listen()</div>
-          </div>
-          <div class="relation">main.cpp는 RequestHandlers에 HTTP 처리 위임</div>
-          <div class="class-box">
-            <div class="class-name">RequestHandlers</div>
-            <div class="class-body">+ handleIndex()
-+ handleAnalyze()
-+ handleUpload()
-+ handleFilter()
-+ handleDownload()</div>
-          </div>
-          <div class="class-box">
-            <div class="class-name">Session / FilteredResultStore</div>
-            <div class="class-body">Session:
-+ resetAll()
-+ defaultFeedbacks()
-+ feedbacksForSession()
-
-FilteredResultStore:
-+ save()
-+ clear()
-+ find()</div>
-          </div>
-          <div class="class-box">
-            <div class="class-name">FeedbackClassifier</div>
-            <div class="class-body">+ classifySentiment()
-+ matchesSentiment()
-+ matchesCategory()
-+ containsAny()</div>
-          </div>
-          <div class="class-box">
-            <div class="class-name">TextAnalyzer / Filters</div>
-            <div class="class-body">TextAnalyzer:
-+ analyzeSentiment()
-+ analyzeCategories()
-
-Filters:
-+ filterFeedbacks()</div>
-          </div>
-          <div class="class-box">
-            <div class="class-name">CSV Services</div>
-            <div class="class-body">CsvFeedbackImporter:
-+ importFeedbacks()
-
-CsvFeedbackExporter:
-+ exportFeedbacks()</div>
-          </div>
-          <div class="class-box">
-            <div class="class-name">Rendering</div>
-            <div class="class-body">FeedbackPageViewModel
-FeedbackPageRenderer:
-+ render()</div>
-          </div>
-          <div class="class-box">
-            <div class="class-name">Logging</div>
-            <div class="class-body">Logger:
-+ logInfo()
-+ logWarning()
-+ logError()
-+ logDebug()
-
-LogEvent
-ConsoleLogSink:
-+ write()</div>
-          </div>
-        </div>
-      </section>
+    <div class="legend">
+      <div class="legend-item"><strong>..&gt;</strong><br>사용/의존 관계</div>
+      <div class="legend-item"><strong>o--</strong><br>상태 또는 데이터 보유</div>
+      <div class="legend-item"><strong>&lt;&lt;Boundary&gt;&gt;</strong><br>외부 입출력 접점</div>
+      <div class="legend-item"><strong>&lt;&lt;Control&gt;&gt;</strong><br>요청 흐름 조정</div>
     </div>
+
+    <div class="change-summary">
+      <div class="change-card">
+        <strong>변경 전 핵심 문제</strong>
+        main.cpp가 HTTP, 상태, CSV, 분석/필터, 렌더링, 로그 호출을 직접 연결해 변경 이유가 집중되어 있었다.
+      </div>
+      <div class="change-card">
+        <strong>변경 후 핵심 구조</strong>
+        main.cpp는 라우트 등록만 담당하고 RequestHandlers가 Control 역할을 수행하며 각 책임별 서비스에 위임한다.
+      </div>
+      <div class="change-card">
+        <strong>SOLID 개선 지점</strong>
+        SRP/OCP 관점에서 CSV, 렌더링, 로깅, 분류 규칙의 변경 영향 범위를 독립 클래스로 제한했다.
+      </div>
+    </div>
+
+    <section class="uml-panel">
+      <h3>3.1 변경 전 UML</h3>
+      <pre class="mermaid">
+classDiagram
+direction TB
+
+class MainCpp {
+  +main() int
+  +getSessionId(Request) string
+  +parseForm(string) map
+  +renderPage(...) string
+  +analyzeFeedbacks(vector) AnalysisResult
+  +route lambdas
+  -fil_data map
+}
+
+class Session {
+  -currentFeedbacks vector
+  -sessionFeedbacks map
+  -internalData map
+  -filterOptions map
+  +initSessionStateUgly() void
+  +getOldDataFromSession(string) vector
+  +getCurrentFeedbacks(string) vector
+}
+
+class TextAnalyzer {
+  -containsAny(string, vector) bool
+  +sent(vector) map
+  +kw(vector) map
+}
+
+class Filters {
+  -S_KEYWORDS map
+  -containsAny(string, vector) bool
+  +initFilterKeywords() void
+  +fil(vector, string, string) vector
+}
+
+class FileHandler {
+  +parseCsvRecords(string) vector
+  +escapeCsvField(string) string
+}
+
+class Logger {
+  -debugMode bool
+  -getTimestamp() string
+  +logInfo(string) void
+  +logWarning(string) void
+  +logError(string) void
+  +logDebug(string) void
+}
+
+class Constants {
+  +SENTIMENT_KEYWORDS map
+  +CATEGORY_KEYWORDS map
+  +init() void
+}
+
+class UIComponents {
+  +getCategories() vector
+}
+
+class Feedback {
+  -text string
+  +getText() string
+}
+
+&lt;&lt;GodObject&gt;&gt; MainCpp
+&lt;&lt;State&gt;&gt; Session
+&lt;&lt;DomainService&gt;&gt; TextAnalyzer
+&lt;&lt;DomainService&gt;&gt; Filters
+&lt;&lt;Utility&gt;&gt; FileHandler
+&lt;&lt;Boundary&gt;&gt; Logger
+&lt;&lt;Data&gt;&gt; Constants
+&lt;&lt;ViewHelper&gt;&gt; UIComponents
+&lt;&lt;Entity&gt;&gt; Feedback
+
+MainCpp ..&gt; Session : reads/writes feedback state
+MainCpp ..&gt; TextAnalyzer : aggregate analysis
+MainCpp ..&gt; Filters : filter request
+MainCpp ..&gt; FileHandler : upload/download CSV
+MainCpp ..&gt; Logger : operational logs
+MainCpp ..&gt; UIComponents : render category options
+MainCpp o-- Feedback : filtered download state
+Session o-- Feedback : session feedbacks
+TextAnalyzer ..&gt; Constants : keyword rules
+TextAnalyzer ..&gt; Feedback : reads text
+Filters ..&gt; Constants : keyword rules
+Filters ..&gt; Feedback : reads text
+      </pre>
+      <p class="relation">
+        변경 전 구조에서는 main.cpp가 Boundary, Control, View, CSV 정책, 상태 조정 역할을 모두 수행한다.
+        TextAnalyzer와 Filters도 각각 키워드 포함 판단 로직을 보유해 분류 규칙 변경 시 중복 수정 위험이 있었다.
+      </p>
+    </section>
+
+    <section class="uml-panel" style="margin-top: 24px;">
+      <h3>3.2 변경 후 UML</h3>
+      <pre class="mermaid">
+classDiagram
+direction TB
+
+class MainCpp {
+  +main() int
+  +route registration
+  +server listen()
+}
+
+class RequestHandlers {
+  +handleIndex(Request, Response) void
+  +handleAnalyze(Request, Response) void
+  +handleUpload(Request, Response) void
+  +handleFilter(Request, Response) void
+  +handleDownload(Request, Response) void
+  -parseForm(string) map
+  -trimAsciiWhitespace(string) string
+}
+
+class Session {
+  -currentFeedbacks vector
+  -sessionFeedbacks map
+  +resetAll() void
+  +defaultFeedbacks() vector
+  +feedbacksForSession(string) vector
+  +getCurrentFeedbacks(string) vector
+}
+
+class FilteredResultStore {
+  +all() map
+  +save(string, vector) void
+  +clear(string) void
+  +find(string) vector
+}
+
+class FeedbackClassifier {
+  +classifySentiment(Feedback) string
+  +matchesSentiment(Feedback, string) bool
+  +matchesCategory(Feedback, string) bool
+  +containsAny(string, vector) bool
+}
+
+class TextAnalyzer {
+  +analyzeSentiment(vector) map
+  +analyzeCategories(vector) map
+  +sent(vector) map
+  +kw(vector) map
+}
+
+class Filters {
+  +filterFeedbacks(vector, string, string) vector
+  +fil(vector, string, string) vector
+}
+
+class CsvFeedbackImporter {
+  +importFeedbacks(string) CsvImportResult
+}
+
+class CsvFeedbackExporter {
+  +exportFeedbacks(vector) string
+}
+
+class FeedbackPageViewModel {
+  +success string
+  +warning string
+  +error string
+  +sentimentResults map
+  +keywordResults map
+  +feedbacks vector
+}
+
+class FeedbackPageRenderer {
+  +render(FeedbackPageViewModel) string
+  -getCurrentTimestamp() string
+  -escapeHtml(string) string
+}
+
+class Logger {
+  +logInfo(string) void
+  +logWarning(string) void
+  +logError(string) void
+  +logDebug(string) void
+}
+
+class LogEvent {
+  +level LogLevel
+  +message string
+  +event string
+  +count int
+  +errorReason string
+  +requestScope string
+}
+
+class ConsoleLogSink {
+  +write(LogEvent) void
+}
+
+class FileHandler {
+  +parseCsvRecords(string) vector
+  +escapeCsvField(string) string
+}
+
+class Constants {
+  +SENTIMENT_KEYWORDS map
+  +CATEGORY_KEYWORDS map
+}
+
+class UIComponents {
+  +getCategories() vector
+}
+
+class Feedback {
+  -text string
+  +getText() string
+}
+
+&lt;&lt;Boundary&gt;&gt; MainCpp
+&lt;&lt;Control&gt;&gt; RequestHandlers
+&lt;&lt;StateStore&gt;&gt; Session
+&lt;&lt;StateStore&gt;&gt; FilteredResultStore
+&lt;&lt;DomainService&gt;&gt; FeedbackClassifier
+&lt;&lt;DomainService&gt;&gt; TextAnalyzer
+&lt;&lt;DomainService&gt;&gt; Filters
+&lt;&lt;Boundary&gt;&gt; CsvFeedbackImporter
+&lt;&lt;Boundary&gt;&gt; CsvFeedbackExporter
+&lt;&lt;DTO&gt;&gt; FeedbackPageViewModel
+&lt;&lt;Boundary&gt;&gt; FeedbackPageRenderer
+&lt;&lt;Facade&gt;&gt; Logger
+&lt;&lt;DTO&gt;&gt; LogEvent
+&lt;&lt;Boundary&gt;&gt; ConsoleLogSink
+&lt;&lt;Utility&gt;&gt; FileHandler
+&lt;&lt;Data&gt;&gt; Constants
+&lt;&lt;ViewHelper&gt;&gt; UIComponents
+&lt;&lt;Entity&gt;&gt; Feedback
+
+MainCpp ..&gt; RequestHandlers : registers route handlers
+RequestHandlers ..&gt; Session : current feedback state
+RequestHandlers ..&gt; FilteredResultStore : downloadable filter state
+RequestHandlers ..&gt; TextAnalyzer : analysis aggregation
+RequestHandlers ..&gt; Filters : filter application
+RequestHandlers ..&gt; CsvFeedbackImporter : upload import
+RequestHandlers ..&gt; CsvFeedbackExporter : download export
+RequestHandlers ..&gt; FeedbackPageRenderer : response HTML
+RequestHandlers ..&gt; Logger : operational events
+
+Session o-- Feedback : owns per-session feedbacks
+FilteredResultStore o-- Feedback : owns filtered results
+TextAnalyzer ..&gt; FeedbackClassifier : classification rules
+Filters ..&gt; FeedbackClassifier : classification rules
+FeedbackClassifier ..&gt; Constants : keyword data
+FeedbackClassifier ..&gt; Feedback : reads text
+CsvFeedbackImporter ..&gt; FileHandler : parse records
+CsvFeedbackImporter ..&gt; Feedback : creates
+CsvFeedbackExporter ..&gt; FileHandler : escape fields
+FeedbackPageRenderer ..&gt; FeedbackPageViewModel : renders
+FeedbackPageRenderer ..&gt; UIComponents : category options
+Logger ..&gt; LogEvent : creates event
+Logger ..&gt; ConsoleLogSink : delegates output
+ConsoleLogSink ..&gt; LogEvent : formats output
+      </pre>
+      <p class="relation">
+        변경 후 구조에서는 RequestHandlers가 Control 역할만 수행하고, 상태 저장소, 도메인 분류, CSV 입출력,
+        화면 렌더링, 로그 출력이 명확한 협력 객체로 분리된다. 분석과 필터는 FeedbackClassifier를 공유하므로
+        감정/카테고리 규칙 변경 시 단일 지점을 수정하면 된다.
+      </p>
+    </section>
 
     <h2>4. 의존성 방향</h2>
     <table>
@@ -335,5 +554,20 @@ ConsoleLogSink:
       후속으로 테스트가 새 API를 사용하도록 전환되면 wrapper 제거를 검토할 수 있다.
     </div>
   </main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: "loose",
+      theme: "base",
+      themeVariables: {
+        primaryColor: "#edf4ff",
+        primaryBorderColor: "#2563eb",
+        primaryTextColor: "#132238",
+        lineColor: "#64748b",
+        fontFamily: "Segoe UI, Arial, sans-serif"
+      }
+    });
+  </script>
 </body>
 </html>
