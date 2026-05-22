@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Feedback Analyzer Refactoring Class Diagram Report</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 32px;
+      background: #f5f7fb;
+      color: #202938;
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+    }
+    h1, h2, h3 {
+      margin-top: 0;
+      color: #132238;
+    }
+    .meta {
+      color: #526070;
+      margin-bottom: 28px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0 32px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #d9e2ec;
+      padding: 10px 12px;
+      vertical-align: top;
+    }
+    th {
+      background: #edf4ff;
+      text-align: left;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    .panel {
+      border: 1px solid #d9e2ec;
+      border-radius: 14px;
+      background: #fbfdff;
+      padding: 20px;
+    }
+    .diagram {
+      display: grid;
+      gap: 12px;
+    }
+    .class-box {
+      border: 1px solid #9fb7d8;
+      border-radius: 10px;
+      background: #ffffff;
+      overflow: hidden;
+    }
+    .class-name {
+      background: #2563eb;
+      color: #ffffff;
+      font-weight: 700;
+      padding: 8px 10px;
+    }
+    .class-body {
+      padding: 8px 10px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .relation {
+      border-left: 3px solid #64748b;
+      padding-left: 10px;
+      color: #334155;
+      font-size: 13px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .note {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: #7c2d12;
+    }
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Feedback Analyzer Refactoring 결과 보고서</h1>
+    <p class="meta">C++17 / CMake / Catch2 호환 환경 기준, R1~R8 리팩토링 완료 후 클래스 구조 비교</p>
+
+    <h2>1. 요약</h2>
+    <p>
+      이번 리팩토링은 기능 변경 없이 기존 Golden Master와 RED 회귀 동작을 유지하면서
+      <strong>main.cpp 중심의 다중 책임 구조</strong>를 요청 처리, 상태 저장, 분류 규칙, CSV, 렌더링, 로깅 경계로 분리했다.
+    </p>
+    <p><span class="badge">최종 검증</span> cmake build 성공, CTest 3개 테스트 그룹 100% PASS</p>
+
+    <h2>2. Refactoring 내역표</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>단계</th>
+          <th>커밋</th>
+          <th>주요 리팩토링</th>
+          <th>구조 개선 효과</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>R1</td>
+          <td>1990f71</td>
+          <td>RED 회귀 테스트 CTest 등록</td>
+          <td>리팩토링 안전망을 단일 테스트 명령으로 통합</td>
+        </tr>
+        <tr>
+          <td>R2</td>
+          <td>18d1408</td>
+          <td>RequestHandlers 분리</td>
+          <td>main.cpp를 서버 시작과 라우트 등록 책임으로 축소</td>
+        </tr>
+        <tr>
+          <td>R3</td>
+          <td>25c157b</td>
+          <td>FilteredResultStore, Session 상태 API 정리</td>
+          <td>피드백 상태와 다운로드 상태의 소유권 명확화</td>
+        </tr>
+        <tr>
+          <td>R4</td>
+          <td>ded0abc</td>
+          <td>FeedbackClassifier 추가</td>
+          <td>분석과 필터가 같은 감정/카테고리 규칙 사용</td>
+        </tr>
+        <tr>
+          <td>R5</td>
+          <td>0c9c527</td>
+          <td>CsvFeedbackImporter/Exporter 추가</td>
+          <td>CSV 정책을 HTTP 핸들러에서 분리</td>
+        </tr>
+        <tr>
+          <td>R6</td>
+          <td>21af4cd</td>
+          <td>LogEvent, ConsoleLogSink 추가</td>
+          <td>로그 이벤트와 콘솔 출력 경계 분리</td>
+        </tr>
+        <tr>
+          <td>R7</td>
+          <td>6644ee7</td>
+          <td>FeedbackPageViewModel/Renderer 추가</td>
+          <td>화면 데이터와 HTML 렌더링 책임 분리</td>
+        </tr>
+        <tr>
+          <td>R8</td>
+          <td>060863a</td>
+          <td>명확한 API 이름 추가</td>
+          <td>레거시 축약명 대신 의도가 드러나는 앱 코드 경로 확보</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. 변경 전/후 클래스 다이어그램 비교</h2>
+    <div class="grid">
+      <section class="panel">
+        <h3>변경 전</h3>
+        <div class="diagram">
+          <div class="class-box">
+            <div class="class-name">main.cpp</div>
+            <div class="class-body">+ getSessionId()
++ parseForm()
++ renderPage()
++ analyzeFeedbacks()
++ route lambdas
++ fil_data
++ server listen()</div>
+          </div>
+          <div class="relation">main.cpp가 요청 처리, 상태, CSV, 분석/필터, 렌더링, 로그 호출을 직접 조정</div>
+          <div class="class-box">
+            <div class="class-name">Session</div>
+            <div class="class-body">+ initSessionStateUgly()
++ getOldDataFromSession()
++ getCurrentFeedbacks()</div>
+          </div>
+          <div class="class-box">
+            <div class="class-name">TextAnalyzer</div>
+            <div class="class-body">+ sent()
++ kw()
+- containsAny()</div>
+          </div>
+          <div class="class-box">
+            <div class="class-name">Filters</div>
+            <div class="class-body">+ fil()
++ initFilterKeywords()
+- containsAny()
+- S_KEYWORDS</div>
+          </div>
+          <div class="class-box">
+            <div class="class-name">FileHandler</div>
+            <div class="class-body">+ parseCsvRecords()
++ escapeCsvField()</div>
+          </div>
+          <div class="class-box">
+            <div class="class-name">Logger</div>
+            <div class="class-body">+ logInfo()
++ logWarning()
++ logError()
++ logDebug()
+- getTimestamp()</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>변경 후</h3>
+        <div class="diagram">
+          <div class="class-box">
+            <div class="class-name">main.cpp</div>
+            <div class="class-body">+ route registration
++ server listen()</div>
+          </div>
+          <div class="relation">main.cpp는 RequestHandlers에 HTTP 처리 위임</div>
+          <div class="class-box">
+            <div class="class-name">RequestHandlers</div>
+            <div class="class-body">+ handleIndex()
++ handleAnalyze()
++ handleUpload()
++ handleFilter()
++ handleDownload()</div>
+          </div>
+          <div class="class-box">
+            <div class="class-name">Session / FilteredResultStore</div>
+            <div class="class-body">Session:
++ resetAll()
++ defaultFeedbacks()
++ feedbacksForSession()
+
+FilteredResultStore:
++ save()
++ clear()
++ find()</div>
+          </div>
+          <div class="class-box">
+            <div class="class-name">FeedbackClassifier</div>
+            <div class="class-body">+ classifySentiment()
++ matchesSentiment()
++ matchesCategory()
++ containsAny()</div>
+          </div>
+          <div class="class-box">
+            <div class="class-name">TextAnalyzer / Filters</div>
+            <div class="class-body">TextAnalyzer:
++ analyzeSentiment()
++ analyzeCategories()
+
+Filters:
++ filterFeedbacks()</div>
+          </div>
+          <div class="class-box">
+            <div class="class-name">CSV Services</div>
+            <div class="class-body">CsvFeedbackImporter:
++ importFeedbacks()
+
+CsvFeedbackExporter:
++ exportFeedbacks()</div>
+          </div>
+          <div class="class-box">
+            <div class="class-name">Rendering</div>
+            <div class="class-body">FeedbackPageViewModel
+FeedbackPageRenderer:
++ render()</div>
+          </div>
+          <div class="class-box">
+            <div class="class-name">Logging</div>
+            <div class="class-body">Logger:
++ logInfo()
++ logWarning()
++ logError()
++ logDebug()
+
+LogEvent
+ConsoleLogSink:
++ write()</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <h2>4. 의존성 방향</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>영역</th>
+          <th>변경 후 방향</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Boundary</td>
+          <td>httplib route, ConsoleLogSink, FeedbackPageRenderer, CSV import/export</td>
+        </tr>
+        <tr>
+          <td>Control</td>
+          <td>RequestHandlers가 요청 흐름과 상태 변경을 조정</td>
+        </tr>
+        <tr>
+          <td>Entity/Domain</td>
+          <td>Feedback, Constants, FeedbackClassifier, TextAnalyzer, Filters</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      테스트 코드 변경 금지 조건 때문에 일부 레거시 wrapper와 <code>fil_data</code> 호환 alias는 유지했다.
+      후속으로 테스트가 새 API를 사용하도록 전환되면 wrapper 제거를 검토할 수 있다.
+    </div>
+  </main>
+</body>
+</html>
