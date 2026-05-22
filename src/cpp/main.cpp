@@ -313,13 +313,21 @@ int main() {
                     std::istringstream stream(file.content);
                     std::string line;
                     bool firstLine = true;
+                    size_t textColumn = 0;
                     while (std::getline(stream, line)) {
                         if (!line.empty() && line.back() == '\r') line.pop_back();
-                        if (firstLine) { firstLine = false; continue; }
                         if (line.empty()) continue;
                         auto fields = parseCsvLine(line);
-                        if (!fields.empty() && !fields[0].empty()) {
-                            feedbacks.push_back(Feedback(fields[0]));
+                        if (firstLine) {
+                            firstLine = false;
+                            auto header = std::find(fields.begin(), fields.end(), "text");
+                            if (header != fields.end()) {
+                                textColumn = static_cast<size_t>(std::distance(fields.begin(), header));
+                                continue;
+                            }
+                        }
+                        if (fields.size() > textColumn && !fields[textColumn].empty()) {
+                            feedbacks.push_back(Feedback(fields[textColumn]));
                         }
                     }
                     Logger::logInfo(u8"파일이 성공적으로 업로드되었습니다.");
