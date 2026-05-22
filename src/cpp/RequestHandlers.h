@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CsvFeedbackExporter.h"
+#include "CsvFeedbackImporter.h"
 #include "Feedback.h"
 #include "FilteredResultStore.h"
 #include "Filters.h"
@@ -10,7 +12,6 @@
 #include "UIComponents.h"
 #include "httplib.h"
 
-#include <algorithm>
 #include <ctime>
 #include <iomanip>
 #include <map>
@@ -298,23 +299,9 @@ inline void handleUpload(const httplib::Request& req, httplib::Response& res) {
 
         const auto previousCount = feedbacks.size();
         const auto file = req.form.get_file("file");
+        const auto importResult = CsvFeedbackImporter::importFeedbacks(file.content);
+        feedbacks.insert(feedbacks.end(), importResult.feedbacks.begin(), importResult.feedbacks.end());
         if (!file.content.empty()) {
-            bool firstLine = true;
-            size_t textColumn = 0;
-            for (const auto& fields : FileHandler::parseCsvRecords(file.content)) {
-                if (fields.empty() || (fields.size() == 1 && fields[0].empty())) continue;
-                if (firstLine) {
-                    firstLine = false;
-                    auto header = std::find(fields.begin(), fields.end(), "text");
-                    if (header != fields.end()) {
-                        textColumn = static_cast<size_t>(std::distance(fields.begin(), header));
-                        continue;
-                    }
-                }
-                if (fields.size() > textColumn && !fields[textColumn].empty()) {
-                    feedbacks.push_back(Feedback(fields[textColumn]));
-                }
-            }
             Logger::logInfo(u8"파일이 성공적으로 업로드되었습니다.");
         }
 
@@ -369,14 +356,8 @@ inline void handleDownload(const httplib::Request& req, httplib::Response& res) 
         return;
     }
 
-    std::ostringstream csv;
-    csv << "\xEF\xBB\xBF";
-    csv << "text\n";
-    for (const auto& item : *filtered) {
-        csv << FileHandler::escapeCsvField(item.getText()) << "\n";
-    }
     res.set_header("Content-Disposition", "attachment; filename=\"filtered_feedback.csv\"");
-    res.set_content(csv.str(), "text/csv; charset=UTF-8");
+    res.set_content(CsvFeedbackExporter::exportFeedbacks(*filtered), "text/csv; charset=UTF-8");
 }
 
 } // namespace RequestHandlers
