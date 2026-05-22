@@ -236,61 +236,6 @@ static std::string renderPage(const std::string& success,
     return html.str();
 }
 
-static std::vector<std::vector<std::string>> parseCsvRecords(const std::string& content) {
-    std::vector<std::vector<std::string>> records;
-    std::vector<std::string> record;
-    std::string field;
-    bool inQuotes = false;
-
-    for (size_t i = 0; i < content.size(); ++i) {
-        const char c = content[i];
-        if (c == '"') {
-            if (inQuotes && i + 1 < content.size() && content[i + 1] == '"') {
-                field += '"';
-                ++i;
-            } else {
-                inQuotes = !inQuotes;
-            }
-        } else if (c == ',' && !inQuotes) {
-            record.push_back(field);
-            field.clear();
-        } else if ((c == '\n' || c == '\r') && !inQuotes) {
-            if (c == '\r' && i + 1 < content.size() && content[i + 1] == '\n') {
-                ++i;
-            }
-            record.push_back(field);
-            records.push_back(record);
-            record.clear();
-            field.clear();
-        } else {
-            field += c;
-        }
-    }
-
-    if (!field.empty() || !record.empty()) {
-        record.push_back(field);
-        records.push_back(record);
-    }
-    return records;
-}
-
-static std::string escapeCsvField(const std::string& field) {
-    if (field.find_first_of(",\"\r\n") == std::string::npos) {
-        return field;
-    }
-
-    std::string escaped = "\"";
-    for (const char c : field) {
-        if (c == '"') {
-            escaped += "\"\"";
-        } else {
-            escaped += c;
-        }
-    }
-    escaped += '"';
-    return escaped;
-}
-
 static void setHtmlResponse(httplib::Response& res, const std::string& html) {
     res.set_content(html, "text/html; charset=UTF-8");
 }
@@ -366,7 +311,7 @@ int main() {
                 if (!file.content.empty()) {
                     bool firstLine = true;
                     size_t textColumn = 0;
-                    for (const auto& fields : parseCsvRecords(file.content)) {
+                    for (const auto& fields : FileHandler::parseCsvRecords(file.content)) {
                         if (fields.empty() || (fields.size() == 1 && fields[0].empty())) continue;
                         if (firstLine) {
                             firstLine = false;
@@ -448,7 +393,7 @@ int main() {
         csv << "\xEF\xBB\xBF";
         csv << "text\n";
         for (const auto& iter : filtered->second) {
-            csv << escapeCsvField(iter.getText()) << "\n";
+            csv << FileHandler::escapeCsvField(iter.getText()) << "\n";
         }
         res.set_header("Content-Disposition", "attachment; filename=\"filtered_feedback.csv\"");
         res.set_content(csv.str(), "text/csv; charset=UTF-8");
