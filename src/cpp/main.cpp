@@ -291,6 +291,10 @@ static std::string escapeCsvField(const std::string& field) {
     return escaped;
 }
 
+static void setHtmlResponse(httplib::Response& res, const std::string& html) {
+    res.set_content(html, "text/html; charset=UTF-8");
+}
+
 int main() {
     Constants::init();
     Filters::initFilterKeywords();
@@ -302,7 +306,7 @@ int main() {
         Session::initSessionStateUgly();
         auto& feedbacks = Session::getOldDataFromSession("current_feedbacks");
         std::string html = renderPage(u8"피드백 분석기 시작", "", "", {}, {}, feedbacks);
-        res.set_content(html, "text/html; charset=UTF-8");
+        setHtmlResponse(res, html);
     });
 
     // POST /analyze
@@ -315,7 +319,7 @@ int main() {
 
             if (text.empty()) {
                 std::string html = renderPage("", u8"유효한 입력을 입력해주세요.", "", {}, {}, feedbacks);
-                res.set_content(html, "text/html; charset=UTF-8");
+                setHtmlResponse(res, html);
                 return;
             }
 
@@ -338,11 +342,11 @@ int main() {
             }
 
             std::string html = renderPage(success, "", "", sentimentResults, keywordResults, feedbacks);
-            res.set_content(html, "text/html; charset=UTF-8");
+            setHtmlResponse(res, html);
         } catch (const std::exception& e) {
             Logger::logError(std::string(u8"오류 발생: ") + e.what());
             std::string html = renderPage("", "", u8"처리 중 오류가 발생했습니다.", {}, {}, {});
-            res.set_content(html, "text/html; charset=UTF-8");
+            setHtmlResponse(res, html);
         }
     });
 
@@ -352,7 +356,7 @@ int main() {
             auto& feedbacks = Session::getCurrentFeedbacks(getSessionId(req));
             if (!req.form.has_file("file")) {
                 std::string html = renderPage("", u8"파일이 선택되지 않았습니다.", "", {}, {}, feedbacks);
-                res.set_content(html, "text/html; charset=UTF-8");
+                setHtmlResponse(res, html);
                 return;
             }
 
@@ -381,16 +385,16 @@ int main() {
             }
             if (feedbacks.size() == previousCount) {
                 std::string html = renderPage("", u8"유효한 CSV 피드백이 없습니다.", "", {}, {}, feedbacks);
-                res.set_content(html, "text/html; charset=UTF-8");
+                setHtmlResponse(res, html);
                 return;
             }
             std::string success = std::to_string(feedbacks.size()) + u8"개의 피드백이 입력되었습니다.";
             std::string html = renderPage(success, "", "", {}, {}, feedbacks);
-            res.set_content(html, "text/html; charset=UTF-8");
+            setHtmlResponse(res, html);
         } catch (const std::exception& e) {
             Logger::logError(std::string(u8"파일 업로드 오류: ") + e.what());
             std::string html = renderPage("", "", u8"파일 업로드 중 오류가 발생했습니다.", {}, {}, {});
-            res.set_content(html, "text/html; charset=UTF-8");
+            setHtmlResponse(res, html);
         }
     });
 
@@ -411,22 +415,22 @@ int main() {
                     auto keywordResults = textAnalyzer.kw(filtered);
                     Logger::logInfo(u8"필터링 결과: " + std::to_string(filtered.size()) + u8"개의 피드백");
                     std::string html = renderPage("", "", "", sentimentResults, keywordResults, filtered);
-                    res.set_content(html, "text/html; charset=UTF-8");
+                    setHtmlResponse(res, html);
                 } else {
                     fil_data.erase(sessionId);
                     Logger::logWarning(u8"필터링 결과가 없습니다.");
                     std::string html = renderPage("", u8"필터링 결과가 없습니다.", "", {}, {}, {});
-                    res.set_content(html, "text/html; charset=UTF-8");
+                    setHtmlResponse(res, html);
                 }
             } else {
                 Logger::logWarning(u8"분석할 피드백이 없습니다.");
                 std::string html = renderPage("", u8"분석할 피드백이 없습니다.", "", {}, {}, {});
-                res.set_content(html, "text/html; charset=UTF-8");
+                setHtmlResponse(res, html);
             }
         } catch (const std::exception& e) {
             Logger::logError(std::string(u8"오류 발생: ") + e.what());
             std::string html = renderPage("", "", u8"처리 중 오류가 발생했습니다.", {}, {}, {});
-            res.set_content(html, "text/html; charset=UTF-8");
+            setHtmlResponse(res, html);
         }
     });
 
