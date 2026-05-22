@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Feedback.h"
+#include "FilteredResultStore.h"
 #include "Filters.h"
 #include "FileHandler.h"
 #include "Logger.h"
@@ -19,11 +20,6 @@
 
 namespace RequestHandlers {
 
-inline std::map<std::string, std::vector<Feedback>>& filteredResults() {
-    static std::map<std::string, std::vector<Feedback>> results;
-    return results;
-}
-
 inline TextAnalyzer& textAnalyzer() {
     static TextAnalyzer analyzer;
     return analyzer;
@@ -37,13 +33,13 @@ inline Filters& filters() {
 inline std::string getSessionId(const httplib::Request& req) {
     const auto it = req.headers.find("Cookie");
     if (it == req.headers.end()) {
-        return "default";
+        return Session::DEFAULT_SESSION_ID;
     }
 
     const std::string key = "sid=";
     const auto pos = it->second.find(key);
     if (pos == std::string::npos) {
-        return "default";
+        return Session::DEFAULT_SESSION_ID;
     }
 
     const auto start = pos + key.size();
@@ -346,12 +342,12 @@ inline void handleFilter(const httplib::Request& req, httplib::Response& res) {
         if (!feedbacks.empty()) {
             auto filtered = filters().fil(feedbacks, sentiment, keyword);
             if (!filtered.empty()) {
-                filteredResults()[sessionId] = filtered;
+                FilteredResultStore::save(sessionId, filtered);
                 auto analysis = analyzeFeedbacks(filtered);
                 Logger::logInfo(u8"필터링 결과: " + std::to_string(filtered.size()) + u8"개의 피드백");
                 setHtmlResponse(res, renderPage("", "", "", analysis.sentiment, analysis.keywords, filtered));
             } else {
-                filteredResults().erase(sessionId);
+                FilteredResultStore::clear(sessionId);
                 Logger::logWarning(u8"필터링 결과가 없습니다.");
                 setHtmlResponse(res, renderPage("", u8"필터링 결과가 없습니다.", "", {}, {}, {}));
             }
@@ -367,8 +363,8 @@ inline void handleFilter(const httplib::Request& req, httplib::Response& res) {
 
 inline void handleDownload(const httplib::Request& req, httplib::Response& res) {
     const auto sessionId = getSessionId(req);
-    const auto filtered = filteredResults().find(sessionId);
-    if (filtered == filteredResults().end() || filtered->second.empty()) {
+    const auto filtered = FilteredResultStore::find(sessionId);
+    if (filtered == nullptr) {
         res.set_content("", "text/csv; charset=UTF-8");
         return;
     }
@@ -376,7 +372,7 @@ inline void handleDownload(const httplib::Request& req, httplib::Response& res) 
     std::ostringstream csv;
     csv << "\xEF\xBB\xBF";
     csv << "text\n";
-    for (const auto& item : filtered->second) {
+    for (const auto& item : *filtered) {
         csv << FileHandler::escapeCsvField(item.getText()) << "\n";
     }
     res.set_header("Content-Disposition", "attachment; filename=\"filtered_feedback.csv\"");

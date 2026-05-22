@@ -4,7 +4,7 @@
 #include "Logger.h"
 #include "RequestHandlers.h"
 
-static std::map<std::string, std::vector<Feedback>>& fil_data = RequestHandlers::filteredResults();
+static std::map<std::string, std::vector<Feedback>>& fil_data = FilteredResultStore::all();
 
 int main() {
     Constants::init();
