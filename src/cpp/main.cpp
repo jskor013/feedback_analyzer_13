@@ -16,7 +16,6 @@
 static std::map<std::string, std::vector<Feedback>> fil_data;
 static TextAnalyzer textAnalyzer;
 static Filters filters;
-static FileHandler fileHandler;
 
 static std::string getSessionId(const httplib::Request& req) {
     const auto it = req.headers.find("Cookie");
