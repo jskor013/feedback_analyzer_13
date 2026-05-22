@@ -47,3 +47,33 @@ if(TARGET Catch2::Catch2WithMain)
 endif()
 
 add_test(NAME golden_master COMMAND feedback_analyzer_golden_master_tests)
+
+add_executable(feedback_analyzer_red_cases_tests
+    tests/red_cases/legacy_red_cases_test.cpp
+    src/cpp/Constants.cpp
+    src/cpp/Filters.cpp
+    src/cpp/Logger.cpp
+    src/cpp/Session.cpp
+    src/cpp/TextAnalyzer.cpp
+)
+
+target_include_directories(feedback_analyzer_red_cases_tests PRIVATE src/cpp)
+
+if(TARGET Catch2::Catch2WithMain)
+    target_link_libraries(feedback_analyzer_red_cases_tests PRIVATE Catch2::Catch2WithMain)
+endif()
+
+add_executable(feedback_analyzer_legacy_red_flow_tests
+    tests/red_cases/legacy_unautomated_red_cases_test.cpp
+    src/cpp/Constants.cpp
+    src/cpp/Filters.cpp
+    src/cpp/Logger.cpp
+    src/cpp/Session.cpp
+    src/cpp/TextAnalyzer.cpp
+    src/cpp/UIComponents.cpp
+)
+
+target_include_directories(feedback_analyzer_legacy_red_flow_tests PRIVATE src/cpp)
+
+add_test(NAME red_cases COMMAND feedback_analyzer_red_cases_tests)
+add_test(NAME legacy_red_flows COMMAND feedback_analyzer_legacy_red_flow_tests)
