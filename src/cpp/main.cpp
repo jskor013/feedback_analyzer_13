@@ -264,7 +264,7 @@ int main() {
     // POST /analyze
     svr.Post("/analyze", [](const httplib::Request& req, httplib::Response& res) {
         try {
-            auto& feedbacks = Session::getCurrentFeedbacks();
+            auto& feedbacks = Session::getCurrentFeedbacks(getSessionId(req));
             auto params = parseForm(req.body);
             std::string text = params["text"];
 
@@ -306,7 +306,7 @@ int main() {
     // POST /upload
     svr.Post("/upload", [](const httplib::Request& req, httplib::Response& res) {
         try {
-            auto& feedbacks = Session::getCurrentFeedbacks();
+            auto& feedbacks = Session::getCurrentFeedbacks(getSessionId(req));
             if (req.form.has_file("file")) {
                 const auto file = req.form.get_file("file");
                 if (!file.content.empty()) {
@@ -338,8 +338,8 @@ int main() {
     // POST /filter
     svr.Post("/filter", [](const httplib::Request& req, httplib::Response& res) {
         try {
-            auto& feedbacks = Session::getCurrentFeedbacks();
             const auto sessionId = getSessionId(req);
+            auto& feedbacks = Session::getCurrentFeedbacks(sessionId);
             auto params = parseForm(req.body);
             std::string sentiment = params["sentiment"];
             std::string keyword = params["keyword"];
