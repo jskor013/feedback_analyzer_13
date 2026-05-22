@@ -13,10 +13,27 @@
 #include <ctime>
 #include <iomanip>
 
-static std::vector<Feedback> fil_data;
+static std::map<std::string, std::vector<Feedback>> fil_data;
 static TextAnalyzer textAnalyzer;
 static Filters filters;
 static FileHandler fileHandler;
+
+static std::string getSessionId(const httplib::Request& req) {
+    const auto it = req.headers.find("Cookie");
+    if (it == req.headers.end()) {
+        return "default";
+    }
+
+    const std::string key = "sid=";
+    const auto pos = it->second.find(key);
+    if (pos == std::string::npos) {
+        return "default";
+    }
+
+    const auto start = pos + key.size();
+    const auto end = it->second.find(';', start);
+    return it->second.substr(start, end == std::string::npos ? std::string::npos : end - start);
+}
 
 // URL decode utility
 static std::string urlDecode(const std::string& str) {
@@ -322,6 +339,7 @@ int main() {
     svr.Post("/filter", [](const httplib::Request& req, httplib::Response& res) {
         try {
             auto& feedbacks = Session::getCurrentFeedbacks();
+            const auto sessionId = getSessionId(req);
             auto params = parseForm(req.body);
             std::string sentiment = params["sentiment"];
             std::string keyword = params["keyword"];
@@ -329,14 +347,14 @@ int main() {
             if (!feedbacks.empty()) {
                 auto filtered = filters.fil(feedbacks, sentiment, keyword);
                 if (!filtered.empty()) {
-                    fil_data = filtered;
+                    fil_data[sessionId] = filtered;
                     auto sentimentResults = textAnalyzer.sent(filtered);
                     auto keywordResults = textAnalyzer.kw(filtered);
                     Logger::logInfo(u8"필터링 결과: " + std::to_string(filtered.size()) + u8"개의 피드백");
                     std::string html = renderPage("", "", "", sentimentResults, keywordResults, filtered);
                     res.set_content(html, "text/html; charset=UTF-8");
                 } else {
-                    fil_data.clear();
+                    fil_data.erase(sessionId);
                     Logger::logWarning(u8"필터링 결과가 없습니다.");
                     std::string html = renderPage("", u8"필터링 결과가 없습니다.", "", {}, {}, {});
                     res.set_content(html, "text/html; charset=UTF-8");
@@ -354,8 +372,10 @@ int main() {
     });
 
     // GET /download
-    svr.Get("/download", [](const httplib::Request&, httplib::Response& res) {
-        if (fil_data.empty()) {
+    svr.Get("/download", [](const httplib::Request& req, httplib::Response& res) {
+        const auto sessionId = getSessionId(req);
+        const auto filtered = fil_data.find(sessionId);
+        if (filtered == fil_data.end() || filtered->second.empty()) {
             res.set_content("", "text/csv; charset=UTF-8");
             return;
         }
@@ -364,7 +384,7 @@ int main() {
         // UTF-8 BOM
         csv << "\xEF\xBB\xBF";
         csv << "text\n";
-        for (const auto& iter : fil_data) {
+        for (const auto& iter : filtered->second) {
             csv << iter.getText() << "\n";
         }
         res.set_header("Content-Disposition", "attachment; filename=\"filtered_feedback.csv\"");
