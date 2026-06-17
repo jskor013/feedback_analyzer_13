@@ -7,23 +7,45 @@
 class Session {
 private:
     static std::vector<Feedback> currentFeedbacks;
-    static std::map<std::string, std::string> internalData;
-    static std::map<std::string, std::string> filterOptions;
+    static std::map<std::string, std::vector<Feedback>> sessionFeedbacks;
 
 public:
+    static constexpr const char* DEFAULT_SESSION_ID = "default";
+
+    static void resetAll() {
+        currentFeedbacks.clear();
+        sessionFeedbacks.clear();
+    }
+
+    static std::vector<Feedback>& defaultFeedbacks() {
+        return currentFeedbacks;
+    }
+
+    static std::vector<Feedback>& feedbacksForSession(const std::string& sessionId) {
+        if (sessionId == DEFAULT_SESSION_ID) {
+            return currentFeedbacks;
+        }
+        return sessionFeedbacks[sessionId];
+    }
+
     static void initSessionStateUgly() {
-        // already initialized as static
+        resetAll();
     }
 
     static std::vector<Feedback>& getOldDataFromSession(const std::string& key) {
-        return currentFeedbacks;
+        return defaultFeedbacks();
     }
 
     static void updateCurrentFeedbacks(const std::vector<Feedback>& feedbacks) {
         currentFeedbacks = feedbacks;
+        sessionFeedbacks.clear();
     }
 
     static std::vector<Feedback>& getCurrentFeedbacks() {
-        return currentFeedbacks;
+        return defaultFeedbacks();
+    }
+
+    static std::vector<Feedback>& getCurrentFeedbacks(const std::string& sessionId) {
+        return feedbacksForSession(sessionId);
     }
 };
